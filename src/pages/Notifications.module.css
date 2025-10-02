@@ -1,0 +1,113 @@
+.notifications {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.emptyState {
+  padding: 48px 24px;
+}
+
+.emptyIcon {
+  font-size: 64px !important;
+  color: #52c41a;
+}
+
+.emptyTitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f1f1f;
+  margin-bottom: 8px;
+}
+
+.emptyDescription {
+  color: #8c8c8c;
+  margin: 0;
+}
+
+.notificationItem {
+  transition: all 0.3s ease;
+  border-radius: 8px;
+  padding: 16px !important;
+  margin-bottom: 8px;
+  background: #fafafa;
+}
+
+.notificationItem:hover {
+  background: #f0f0f0;
+  transform: translateX(4px);
+}
+
+.notificationAvatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notificationIcon {
+  font-size: 20px;
+}
+
+.notificationHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.notificationMessage {
+  font-size: 14px;
+  color: #1f1f1f;
+  line-height: 1.5;
+  flex: 1;
+  margin-right: 12px;
+}
+
+.notificationTag {
+  flex-shrink: 0;
+}
+
+.notificationFooter {
+  margin-top: 4px;
+}
+
+.notificationTime {
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
+.settingsGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.settingItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  background: #fafafa;
+}
+
+.settingInfo {
+  flex: 1;
+}
+
+.settingTitle {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1f1f1f;
+  margin-bottom: 4px;
+}
+
+.settingDescription {
+  font-size: 12px;
+  color: #8c8c8c;
+  line-height: 1.4;
+}

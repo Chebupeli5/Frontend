@@ -1,0 +1,40 @@
+.operations {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.summaryCard {
+  margin-bottom: 24px;
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 24px;
+}
+
+.summaryItem {
+  text-align: center;
+  padding: 16px;
+  border-radius: 8px;
+  background: #fafafa;
+}
+
+.summaryLabel {
+  display: block;
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.incomeAmount {
+  font-size: 24px;
+  font-weight: 600;
+  color: #52c41a;
+}
+
+.expenseAmount {
+  font-size: 24px;
+  font-weight: 600;
+  color: #f5222d;
+}

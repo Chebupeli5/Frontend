@@ -1,0 +1,56 @@
+.assets {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.assetCard {
+  height: 100%;
+  transition: all 0.3s ease;
+}
+
+.assetCard:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.assetHeader {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.assetIcon {
+  font-size: 24px;
+  color: #1890ff;
+  margin-right: 12px;
+}
+
+.assetName {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f1f1f;
+  flex: 1;
+}
+
+.assetBalance {
+  text-align: center;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 48px 24px;
+  color: #8c8c8c;
+}
+
+.emptyIcon {
+  font-size: 48px;
+  color: #d9d9d9;
+  margin-bottom: 16px;
+  display: block;
+}
+
+.emptyState p {
+  font-size: 16px;
+  margin-bottom: 24px;
+}
