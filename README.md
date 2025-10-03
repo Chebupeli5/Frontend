@@ -1,73 +1,108 @@
-# React + TypeScript + Vite
+# Finansik
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+> Веб-приложение для управления личными финансами на React + TypeScript + Ant Design.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 📸 Скриншоты интерфейса
 
-## React Compiler
+_Вставьте сюда изображения страниц для демонстрации дизайна. Рекомендуется хранить их в папке `screenshots/` рядом с README._
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Главная (Дашборд)
 
-## Expanding the ESLint configuration
+![Главная](screenshots/dashboard.png)
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Операции
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+![Операции](screenshots/operations.png)
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### Категории
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+![Категории](screenshots/categories.png)
+
+### Счета
+
+![Счета](screenshots/assets.png)
+
+### Накопления
+
+![Накопления](screenshots/savings.png)
+
+### Кредиты
+
+![Кредиты](screenshots/loans.png)
+
+### Цели
+
+![Цели](screenshots/goals.png)
+
+### Уведомления
+
+![Уведомления](screenshots/notifications.png)
+
+---
+
+## 🚀 Быстрый старт
+
+1. Установите зависимости:
+
+```sh
+ npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+2. Запустите проект:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```sh
+  npm run dev
 ```
+
+## Технологии
+
+- React + TypeScript
+- AntDesign (UI)
+- RTK + RTK Query
+- React Router v6
+- CSS Modules
+- Vite (сборка)
+- JWT (Авторизация)
+
+## Структура проекта
+
+> src/
+>
+> - components/ # UI-компоненты (Auth, Layout).
+> - pages/ # Страницы приложения
+> - store/ # Redux store и слайсы
+> - types/ # Типы данных
+> - data/ # Моковые данные
+> - hooks/ # Кастомные хуки
+> - utils/ # Утилиты
+
+## Функционал
+
+> - Авторизация и регистрация (JWT)
+> - Дашборд: общий капитал, доходы/расходы, лимиты
+> - Операции: учёт доходов и расходов
+> - Категории: управление и лимиты
+> - Счета: банковские карты, наличные
+> - Накопления: процентные счета
+> - Кредиты: займы, платежи, напоминания
+> - Цели: финансовые цели, прогресс
+> - Уведомления: лимиты, платежи, поступления, достижения
+
+## Ключевые файлы
+
+> - src/data/mockData.ts — моки
+> - src/store/appSlice.ts — бизнес-логика
+> - src/store/authSlice.ts — авторизация
+> - src/hooks/redux.ts — типизированные хуки
+> - src/utils/notifications.ts — уведомления
+> - src/types/index.ts — типы данных
+> - src/components/Auth/Auth.tsx — UI авторизации
+> - src/components/Layout/AppLayout.tsx — основной лейаут
+
+## Дальнейшее развитие
+
+- Интеграция с реальным API
+- Генерация отчётов
+- Графики и аналитика
