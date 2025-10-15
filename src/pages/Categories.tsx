@@ -49,17 +49,8 @@ const Categories: React.FC = () => {
 
   if (!currentUser) return null;
 
-  const userCategories = categories.filter(
-    (c) => c.user_id === currentUser.user_id
-  );
-  const userLimits = categoryLimits.filter(
-    (cl) => cl.user_id === currentUser.user_id
-  );
-
   const getCategoryData = (category: Category) => {
-    const limit = userLimits.find(
-      (l) => l.category_id === category.category_id
-    );
+    const limit = categoryLimits.find((l) => l.category_id === category.category_id);
     const monthlyExpenses = operations
       .filter(
         (op) =>
@@ -93,12 +84,7 @@ const Categories: React.FC = () => {
 
   const handleDeleteCategory = (categoryId: number) => {
     dispatch(deleteCategory(categoryId));
-    dispatch(
-      deleteCategoryLimit({
-        user_id: currentUser.user_id,
-        category_id: categoryId,
-      })
-    );
+  dispatch(deleteCategoryLimit(categoryId));
     message.success("Категория удалена");
   };
 
@@ -109,7 +95,7 @@ const Categories: React.FC = () => {
     } else {
       const newCategory: Category = {
         category_id: Math.max(...categories.map((c) => c.category_id), 0) + 1,
-        user_id: currentUser.user_id,
+  user_id: currentUser.user_id,
         name: values.name,
         balance: values.balance || 0,
       };
@@ -121,8 +107,8 @@ const Categories: React.FC = () => {
   };
 
   const handleSetLimit = (categoryId: number) => {
-    const category = userCategories.find((c) => c.category_id === categoryId);
-    const limit = userLimits.find((l) => l.category_id === categoryId);
+    const category = categories.find((c) => c.category_id === categoryId);
+    const limit = categoryLimits.find((l) => l.category_id === categoryId);
 
     setSelectedCategoryId(categoryId);
     limitForm.setFieldsValue({
@@ -135,7 +121,7 @@ const Categories: React.FC = () => {
   const handleLimitSubmit = (values: { limit: number }) => {
     if (selectedCategoryId) {
       const limitData: CategoryLimit = {
-        user_id: currentUser.user_id,
+  user_id: currentUser.user_id,
         category_id: selectedCategoryId,
         limit: values.limit,
       };
@@ -161,7 +147,7 @@ const Categories: React.FC = () => {
         }
       >
         <Row gutter={[16, 16]}>
-          {userCategories.map((category) => {
+          {categories.map((category) => {
             const categoryData = getCategoryData(category);
 
             return (

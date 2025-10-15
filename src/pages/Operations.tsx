@@ -35,13 +35,6 @@ const Operations: React.FC = () => {
 
   if (!currentUser) return null;
 
-  const userOperations = operations.filter(
-    (o) => o.user_id === currentUser.user_id
-  );
-  const userCategories = categories.filter(
-    (c) => c.user_id === currentUser.user_id
-  );
-
   const columns: ColumnsType<Operation> = [
     {
       title: "Дата",
@@ -56,12 +49,12 @@ const Operations: React.FC = () => {
       dataIndex: "category_id",
       key: "category_id",
       render: (categoryId: number) => {
-        const category = userCategories.find(
+        const category = categories.find(
           (c) => c.category_id === categoryId
         );
         return category?.name || "Неизвестная категория";
       },
-      filters: userCategories.map((c) => ({
+      filters: categories.map((c) => ({
         text: c.name,
         value: c.category_id,
       })),
@@ -136,7 +129,7 @@ const Operations: React.FC = () => {
   };
 
   const handleDelete = (operationId: number) => {
-    dispatch(deleteOperation(operationId));
+  dispatch(deleteOperation(operationId));
     message.success("Операция удалена");
   };
 
@@ -160,18 +153,16 @@ const Operations: React.FC = () => {
 
     // Проверка лимитов для расходов
     if (values.type === "expense") {
-      const category = userCategories.find(
+      const category = categories.find(
         (c) => c.category_id === values.category_id
       );
       const limit = categoryLimits.find(
-        (cl) =>
-          cl.user_id === currentUser.user_id &&
-          cl.category_id === values.category_id
+        (cl) => cl.category_id === values.category_id
       );
 
       if (category && limit) {
         const monthlyExpenses =
-          userOperations
+          operations
             .filter(
               (op) =>
                 op.category_id === values.category_id &&
@@ -205,11 +196,11 @@ const Operations: React.FC = () => {
     form.resetFields();
   };
 
-  const totalIncome = userOperations
+  const totalIncome = operations
     .filter((o) => o.type === "income")
     .reduce((sum, o) => sum + Math.abs(o.transaction), 0);
 
-  const totalExpenses = userOperations
+  const totalExpenses = operations
     .filter((o) => o.type === "expense")
     .reduce((sum, o) => sum + Math.abs(o.transaction), 0);
 
@@ -255,7 +246,7 @@ const Operations: React.FC = () => {
       >
         <Table
           columns={columns}
-          dataSource={userOperations}
+          dataSource={operations}
           rowKey="operation_id"
           pagination={{
             pageSize: 10,
@@ -292,7 +283,7 @@ const Operations: React.FC = () => {
             rules={[{ required: true, message: "Выберите категорию" }]}
           >
             <Select placeholder="Выберите категорию">
-              {userCategories.map((category) => (
+              {categories.map((category) => (
                 <Option key={category.category_id} value={category.category_id}>
                   {category.name}
                 </Option>

@@ -12,6 +12,8 @@ import {
   message,
   Popconfirm,
   Statistic,
+  Spin,
+  Alert,
 } from "antd";
 import {
   PlusOutlined,
@@ -20,12 +22,13 @@ import {
   BankOutlined,
   PercentageOutlined,
 } from "@ant-design/icons";
-import { useAppSelector, useAppDispatch } from "../hooks/redux";
+import { useAppSelector } from "../hooks/redux";
 import {
-  addSavingsAccount,
-  updateSavingsAccount,
-  deleteSavingsAccount,
-} from "../store/appSlice";
+  useGetSavingsAccountsQuery,
+  useCreateSavingsAccountMutation,
+  useUpdateSavingsAccountMutation,
+  useDeleteSavingsAccountMutation,
+} from "../services/savingsAccountsApi";
 import type { SavingsAccount } from "../types";
 import styles from "./Savings.module.css";
 
@@ -36,23 +39,27 @@ const Savings: React.FC = () => {
   );
   const [form] = Form.useForm();
 
-  const dispatch = useAppDispatch();
   const { currentUser } = useAppSelector((state) => state.auth);
-  const { savingsAccounts } = useAppSelector((state) => state.app);
+  const {
+    data: savingsAccounts = [],
+    isFetching,
+    isLoading,
+    isError,
+  } = useGetSavingsAccountsQuery();
+  const [createSavingsAccount] = useCreateSavingsAccountMutation();
+  const [updateSavingsAccount] = useUpdateSavingsAccountMutation();
+  const [deleteSavingsAccount] = useDeleteSavingsAccountMutation();
 
   if (!currentUser) return null;
 
-  const userSavings = savingsAccounts.filter(
-    (sa) => sa.user_id === currentUser.user_id
-  );
-  const totalSavings = userSavings.reduce(
+  const totalSavings = savingsAccounts.reduce(
     (sum, saving) => sum + saving.balance,
     0
   );
   const averageRate =
-    userSavings.length > 0
-      ? userSavings.reduce((sum, saving) => sum + saving.interest_rate, 0) /
-        userSavings.length
+    savingsAccounts.length > 0
+      ? savingsAccounts.reduce((sum, saving) => sum + saving.interest_rate, 0) /
+        savingsAccounts.length
       : 0;
 
   const handleAdd = () => {
@@ -67,204 +74,227 @@ const Savings: React.FC = () => {
     setIsModalVisible(true);
   };
 
-  const handleDelete = (savingName: string) => {
-    dispatch(
-      deleteSavingsAccount({
-        user_id: currentUser.user_id,
-        saving_name: savingName,
-      })
-    );
-    message.success("Накопительный счёт удалён");
+  const handleDelete = async (id: number) => {
+    try {
+      await deleteSavingsAccount(id).unwrap();
+      message.success("Накопительный счёт удалён");
+    } catch {
+      message.error("Ошибка удаления счёта");
+    }
   };
 
-  const handleSubmit = (values: {
+  const handleSubmit = async (values: {
     saving_name: string;
     balance: number;
     interest_rate: number;
   }) => {
-    if (editingSaving) {
-      dispatch(
-        updateSavingsAccount({
-          user_id: currentUser.user_id,
+    try {
+      if (editingSaving) {
+        await updateSavingsAccount({
+          id: editingSaving.id,
           saving_name: values.saving_name,
           balance: values.balance,
           interest_rate: values.interest_rate,
-        })
-      );
-      message.success("Накопительный счёт обновлён");
-    } else {
-      const newSaving: SavingsAccount = {
-        user_id: currentUser.user_id,
-        saving_name: values.saving_name,
-        balance: values.balance,
-        interest_rate: values.interest_rate,
-      };
-      dispatch(addSavingsAccount(newSaving));
-      message.success("Накопительный счёт добавлен");
+        }).unwrap();
+        message.success("Накопительный счёт обновлён");
+      } else {
+        await createSavingsAccount({
+          saving_name: values.saving_name,
+          balance: values.balance,
+          interest_rate: values.interest_rate,
+        }).unwrap();
+        message.success("Накопительный счёт добавлен");
+      }
+      setIsModalVisible(false);
+      form.resetFields();
+    } catch {
+      message.error("Ошибка сохранения счёта");
     }
-    setIsModalVisible(false);
-    form.resetFields();
   };
 
   const calculateYearlyReturn = (balance: number, rate: number) => {
     return (balance * rate) / 100;
   };
 
+  const isProcessing = isLoading || isFetching;
+
   return (
     <div className={styles.savings}>
-      <Row gutter={[24, 24]}>
-        <Col xs={24} sm={12}>
-          <Card>
-            <Statistic
-              title="Общие накопления"
-              value={totalSavings}
-              precision={0}
-              valueStyle={{ color: "#52c41a", fontSize: "28px" }}
-              prefix={<BankOutlined />}
-              suffix="₽"
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12}>
-          <Card>
-            <Statistic
-              title="Средняя процентная ставка"
-              value={averageRate}
-              precision={1}
-              valueStyle={{ color: "#1890ff", fontSize: "28px" }}
-              prefix={<PercentageOutlined />}
-              suffix="%"
-            />
-          </Card>
-        </Col>
-      </Row>
+      {isError && (
+        <Alert
+          type="error"
+          message="Не удалось загрузить накопительные счета"
+          description="Попробуйте обновить страницу позже."
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
+      )}
 
-      <Row gutter={[24, 24]} style={{ marginTop: 24 }}>
-        <Col span={24}>
-          <Card
-            title="Накопительные счета"
-            extra={
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={handleAdd}
+      <Spin spinning={isProcessing} tip="Загрузка накоплений...">
+        <div>
+          <Row gutter={[24, 24]}>
+            <Col xs={24} sm={12}>
+              <Card>
+                <Statistic
+                  title="Общие накопления"
+                  value={totalSavings}
+                  precision={0}
+                  valueStyle={{ color: "#52c41a", fontSize: "28px" }}
+                  prefix={<BankOutlined />}
+                  suffix="₽"
+                />
+              </Card>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Card>
+                <Statistic
+                  title="Средняя процентная ставка"
+                  value={averageRate}
+                  precision={1}
+                  valueStyle={{ color: "#1890ff", fontSize: "28px" }}
+                  prefix={<PercentageOutlined />}
+                  suffix="%"
+                />
+              </Card>
+            </Col>
+          </Row>
+
+          <Row gutter={[24, 24]} style={{ marginTop: 24 }}>
+            <Col span={24}>
+              <Card
+                title="Накопительные счета"
+                extra={
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={handleAdd}
+                    disabled={isProcessing}
+                  >
+                    Добавить счёт
+                  </Button>
+                }
               >
-                Добавить счёт
-              </Button>
-            }
-          >
-            <Row gutter={[16, 16]}>
-              {userSavings.map((saving) => {
-                const yearlyReturn = calculateYearlyReturn(
-                  saving.balance,
-                  saving.interest_rate
-                );
-                const monthlyReturn = yearlyReturn / 12;
+                <Row gutter={[16, 16]}>
+                  {savingsAccounts.map((saving) => {
+                    const yearlyReturn = calculateYearlyReturn(
+                      saving.balance,
+                      saving.interest_rate
+                    );
+                    const monthlyReturn = yearlyReturn / 12;
 
-                return (
-                  <Col xs={24} sm={12} lg={8} key={saving.saving_name}>
-                    <Card
-                      size="small"
-                      className={styles.savingCard}
-                      actions={[
-                        <Button
-                          type="text"
-                          icon={<EditOutlined />}
-                          onClick={() => handleEdit(saving)}
-                          title="Редактировать"
-                        />,
-                        <Popconfirm
-                          title="Удалить счёт?"
-                          description="Это действие нельзя отменить"
-                          onConfirm={() => handleDelete(saving.saving_name)}
-                          okText="Да"
-                          cancelText="Нет"
+                    return (
+                      <Col xs={24} sm={12} lg={8} key={saving.id}>
+                        <Card
+                          size="small"
+                          className={styles.savingCard}
+                          actions={[
+                            <Button
+                              type="text"
+                              icon={<EditOutlined />}
+                              onClick={() => handleEdit(saving)}
+                              title="Редактировать"
+                              disabled={isProcessing}
+                            />,
+                            <Popconfirm
+                              title="Удалить счёт?"
+                              description="Это действие нельзя отменить"
+                              onConfirm={() => handleDelete(saving.id)}
+                              okText="Да"
+                              cancelText="Нет"
+                              disabled={isProcessing}
+                            >
+                              <Button
+                                type="text"
+                                danger
+                                icon={<DeleteOutlined />}
+                                title="Удалить"
+                                disabled={isProcessing}
+                              />
+                            </Popconfirm>,
+                          ]}
                         >
-                          <Button
-                            type="text"
-                            danger
-                            icon={<DeleteOutlined />}
-                            title="Удалить"
-                          />
-                        </Popconfirm>,
-                      ]}
+                          <div className={styles.savingHeader}>
+                            <BankOutlined className={styles.savingIcon} />
+                            <h4 className={styles.savingName}>
+                              {saving.saving_name}
+                            </h4>
+                          </div>
+
+                          <div className={styles.savingBalance}>
+                            <Statistic
+                              title="Накоплено"
+                              value={saving.balance}
+                              precision={0}
+                              suffix="₽"
+                              valueStyle={{
+                                fontSize: "20px",
+                                color: "#52c41a",
+                              }}
+                            />
+                          </div>
+
+                          <div className={styles.rateSection}>
+                            <div className={styles.rateDisplay}>
+                              <span className={styles.rateLabel}>
+                                Процентная ставка:
+                              </span>
+                              <span className={styles.rateValue}>
+                                {saving.interest_rate}%
+                              </span>
+                            </div>
+
+                            <div className={styles.returns}>
+                              <div className={styles.returnItem}>
+                                <span className={styles.returnLabel}>
+                                  Доход в месяц:
+                                </span>
+                                <span className={styles.returnValue}>
+                                  +
+                                  {monthlyReturn.toLocaleString("ru-RU", {
+                                    maximumFractionDigits: 0,
+                                  })}{" "}
+                                  ₽
+                                </span>
+                              </div>
+                              <div className={styles.returnItem}>
+                                <span className={styles.returnLabel}>
+                                  Доход в год:
+                                </span>
+                                <span className={styles.returnValue}>
+                                  +
+                                  {yearlyReturn.toLocaleString("ru-RU", {
+                                    maximumFractionDigits: 0,
+                                  })}{" "}
+                                  ₽
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </Card>
+                      </Col>
+                    );
+                  })}
+                </Row>
+
+                {savingsAccounts.length === 0 && !isProcessing && (
+                  <div className={styles.emptyState}>
+                    <BankOutlined className={styles.emptyIcon} />
+                    <p>У вас пока нет накопительных счетов</p>
+                    <Button
+                      type="primary"
+                      icon={<PlusOutlined />}
+                      onClick={handleAdd}
+                      disabled={isProcessing}
                     >
-                      <div className={styles.savingHeader}>
-                        <BankOutlined className={styles.savingIcon} />
-                        <h4 className={styles.savingName}>
-                          {saving.saving_name}
-                        </h4>
-                      </div>
-
-                      <div className={styles.savingBalance}>
-                        <Statistic
-                          title="Накоплено"
-                          value={saving.balance}
-                          precision={0}
-                          suffix="₽"
-                          valueStyle={{ fontSize: "20px", color: "#52c41a" }}
-                        />
-                      </div>
-
-                      <div className={styles.rateSection}>
-                        <div className={styles.rateDisplay}>
-                          <span className={styles.rateLabel}>
-                            Процентная ставка:
-                          </span>
-                          <span className={styles.rateValue}>
-                            {saving.interest_rate}%
-                          </span>
-                        </div>
-
-                        <div className={styles.returns}>
-                          <div className={styles.returnItem}>
-                            <span className={styles.returnLabel}>
-                              Доход в месяц:
-                            </span>
-                            <span className={styles.returnValue}>
-                              +
-                              {monthlyReturn.toLocaleString("ru-RU", {
-                                maximumFractionDigits: 0,
-                              })}{" "}
-                              ₽
-                            </span>
-                          </div>
-                          <div className={styles.returnItem}>
-                            <span className={styles.returnLabel}>
-                              Доход в год:
-                            </span>
-                            <span className={styles.returnValue}>
-                              +
-                              {yearlyReturn.toLocaleString("ru-RU", {
-                                maximumFractionDigits: 0,
-                              })}{" "}
-                              ₽
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </Card>
-                  </Col>
-                );
-              })}
-            </Row>
-
-            {userSavings.length === 0 && (
-              <div className={styles.emptyState}>
-                <BankOutlined className={styles.emptyIcon} />
-                <p>У вас пока нет накопительных счетов</p>
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={handleAdd}
-                >
-                  Создать первый счёт
-                </Button>
-              </div>
-            )}
-          </Card>
-        </Col>
-      </Row>
+                      Создать первый счёт
+                    </Button>
+                  </div>
+                )}
+              </Card>
+            </Col>
+          </Row>
+        </div>
+      </Spin>
 
       <Modal
         title={

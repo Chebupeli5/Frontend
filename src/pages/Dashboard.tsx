@@ -12,43 +12,20 @@ import styles from "./Dashboard.module.css";
 
 const Dashboard: React.FC = () => {
   const { currentUser } = useAppSelector((state) => state.auth);
-  const {
-    categories,
-    assets,
-    savingsAccounts,
-    loans,
-    operations,
-    categoryLimits,
-  } = useAppSelector((state) => state.app);
+  const { categories, assets, savingsAccounts, loans, operations, categoryLimits } =
+    useAppSelector((state) => state.app);
 
   if (!currentUser) return null;
 
-  const userCategories = categories.filter(
-    (c) => c.user_id === currentUser.user_id
-  );
-  const userAssets = assets.filter((a) => a.user_id === currentUser.user_id);
-  const userSavings = savingsAccounts.filter(
-    (sa) => sa.user_id === currentUser.user_id
-  );
-  const userLoans = loans.filter((l) => l.user_id === currentUser.user_id);
-  const userOperations = operations.filter(
-    (o) => o.user_id === currentUser.user_id
-  );
-  const userLimits = categoryLimits.filter(
-    (cl) => cl.user_id === currentUser.user_id
-  );
-
-  const totalAssets = userAssets.reduce((sum, asset) => sum + asset.balance, 0);
-  const totalSavings = userSavings.reduce(
+  const savingsAccountsList = savingsAccounts ?? [];
+  const totalAssets = assets.reduce((sum, asset) => sum + asset.balance, 0);
+  const totalSavings = savingsAccountsList.reduce(
     (sum, saving) => sum + saving.balance,
     0
   );
-  const totalLoans = userLoans.reduce(
-    (sum, loan) => sum + loan.loan_balance,
-    0
-  );
+  const totalLoans = loans.reduce((sum, loan) => sum + loan.loan_balance, 0);
 
-  const monthlyIncome = userOperations
+  const monthlyIncome = operations
     .filter(
       (op) =>
         op.type === "income" &&
@@ -56,7 +33,7 @@ const Dashboard: React.FC = () => {
     )
     .reduce((sum, op) => sum + Math.abs(op.transaction), 0);
 
-  const monthlyExpenses = userOperations
+  const monthlyExpenses = operations
     .filter(
       (op) =>
         op.type === "expense" &&
@@ -66,14 +43,12 @@ const Dashboard: React.FC = () => {
 
   const netWorth = totalAssets + totalSavings - totalLoans;
 
-  const recentOperations = userOperations
+  const recentOperations = [...operations]
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 5);
 
-  const categorySpending = userCategories.map((category) => {
-    const limit = userLimits.find(
-      (l) => l.category_id === category.category_id
-    );
+  const categorySpending = categories.map((category) => {
+    const limit = categoryLimits.find((l) => l.category_id === category.category_id);
     const spent = Math.abs(category.balance);
     const limitAmount = limit?.limit || 0;
     const percentage = limitAmount > 0 ? (spent / limitAmount) * 100 : 0;
@@ -179,7 +154,7 @@ const Dashboard: React.FC = () => {
               size="small"
               dataSource={recentOperations}
               renderItem={(operation) => {
-                const category = userCategories.find(
+                const category = categories.find(
                   (c) => c.category_id === operation.category_id
                 );
                 return (

@@ -4,7 +4,6 @@ import type {
   AppState,
   Category,
   CategoryLimit,
-  SavingsAccount,
   Asset,
   FinancialGoal,
   Loan,
@@ -14,7 +13,6 @@ import type {
 import {
   mockCategories,
   mockCategoryLimits,
-  mockSavingsAccounts,
   mockAssets,
   mockFinancialGoals,
   mockLoans,
@@ -28,7 +26,6 @@ const initialState: AppState = {
   users: mockUsers,
   categories: mockCategories,
   categoryLimits: mockCategoryLimits,
-  savingsAccounts: mockSavingsAccounts,
   assets: mockAssets,
   financialGoals: mockFinancialGoals,
   loans: mockLoans,
@@ -62,9 +59,7 @@ const appSlice = createSlice({
     // Category Limits
     addCategoryLimit: (state, action: PayloadAction<CategoryLimit>) => {
       const existingIndex = state.categoryLimits.findIndex(
-        (cl) =>
-          cl.user_id === action.payload.user_id &&
-          cl.category_id === action.payload.category_id
+        (cl) => cl.category_id === action.payload.category_id
       );
       if (existingIndex !== -1) {
         state.categoryLimits[existingIndex] = action.payload;
@@ -72,43 +67,9 @@ const appSlice = createSlice({
         state.categoryLimits.push(action.payload);
       }
     },
-    deleteCategoryLimit: (
-      state,
-      action: PayloadAction<{ user_id: number; category_id: number }>
-    ) => {
+    deleteCategoryLimit: (state, action: PayloadAction<number>) => {
       state.categoryLimits = state.categoryLimits.filter(
-        (cl) =>
-          !(
-            cl.user_id === action.payload.user_id &&
-            cl.category_id === action.payload.category_id
-          )
-      );
-    },
-
-    // Savings Accounts
-    addSavingsAccount: (state, action: PayloadAction<SavingsAccount>) => {
-      state.savingsAccounts.push(action.payload);
-    },
-    updateSavingsAccount: (state, action: PayloadAction<SavingsAccount>) => {
-      const index = state.savingsAccounts.findIndex(
-        (sa) =>
-          sa.user_id === action.payload.user_id &&
-          sa.saving_name === action.payload.saving_name
-      );
-      if (index !== -1) {
-        state.savingsAccounts[index] = action.payload;
-      }
-    },
-    deleteSavingsAccount: (
-      state,
-      action: PayloadAction<{ user_id: number; saving_name: string }>
-    ) => {
-      state.savingsAccounts = state.savingsAccounts.filter(
-        (sa) =>
-          !(
-            sa.user_id === action.payload.user_id &&
-            sa.saving_name === action.payload.saving_name
-          )
+        (cl) => cl.category_id !== action.payload
       );
     },
 
@@ -118,24 +79,14 @@ const appSlice = createSlice({
     },
     updateAsset: (state, action: PayloadAction<Asset>) => {
       const index = state.assets.findIndex(
-        (a) =>
-          a.user_id === action.payload.user_id && a.name === action.payload.name
+        (a) => a.name === action.payload.name
       );
       if (index !== -1) {
         state.assets[index] = action.payload;
       }
     },
-    deleteAsset: (
-      state,
-      action: PayloadAction<{ user_id: number; name: string }>
-    ) => {
-      state.assets = state.assets.filter(
-        (a) =>
-          !(
-            a.user_id === action.payload.user_id &&
-            a.name === action.payload.name
-          )
-      );
+    deleteAsset: (state, action: PayloadAction<string>) => {
+      state.assets = state.assets.filter((a) => a.name !== action.payload);
     },
 
     // Financial Goals
@@ -144,24 +95,15 @@ const appSlice = createSlice({
     },
     updateFinancialGoal: (state, action: PayloadAction<FinancialGoal>) => {
       const index = state.financialGoals.findIndex(
-        (fg) =>
-          fg.user_id === action.payload.user_id &&
-          fg.goal_name === action.payload.goal_name
+        (fg) => fg.goal_name === action.payload.goal_name
       );
       if (index !== -1) {
         state.financialGoals[index] = action.payload;
       }
     },
-    deleteFinancialGoal: (
-      state,
-      action: PayloadAction<{ user_id: number; goal_name: string }>
-    ) => {
+    deleteFinancialGoal: (state, action: PayloadAction<string>) => {
       state.financialGoals = state.financialGoals.filter(
-        (fg) =>
-          !(
-            fg.user_id === action.payload.user_id &&
-            fg.goal_name === action.payload.goal_name
-          )
+        (fg) => fg.goal_name !== action.payload
       );
     },
 
@@ -171,24 +113,15 @@ const appSlice = createSlice({
     },
     updateLoan: (state, action: PayloadAction<Loan>) => {
       const index = state.loans.findIndex(
-        (l) =>
-          l.user_id === action.payload.user_id &&
-          l.credit_name === action.payload.credit_name
+        (l) => l.credit_name === action.payload.credit_name
       );
       if (index !== -1) {
         state.loans[index] = action.payload;
       }
     },
-    deleteLoan: (
-      state,
-      action: PayloadAction<{ user_id: number; credit_name: string }>
-    ) => {
+    deleteLoan: (state, action: PayloadAction<string>) => {
       state.loans = state.loans.filter(
-        (l) =>
-          !(
-            l.user_id === action.payload.user_id &&
-            l.credit_name === action.payload.credit_name
-          )
+        (l) => l.credit_name !== action.payload
       );
     },
 
@@ -237,9 +170,6 @@ export const {
   deleteCategory,
   addCategoryLimit,
   deleteCategoryLimit,
-  addSavingsAccount,
-  updateSavingsAccount,
-  deleteSavingsAccount,
   addAsset,
   updateAsset,
   deleteAsset,

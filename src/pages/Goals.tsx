@@ -43,19 +43,10 @@ const Goals: React.FC = () => {
 
   if (!currentUser) return null;
 
-  const userGoals = financialGoals.filter(
-    (fg) => fg.user_id === currentUser.user_id
-  );
-  const userAssets = assets.filter((a) => a.user_id === currentUser.user_id);
-  const userSavings = savingsAccounts.filter(
-    (sa) => sa.user_id === currentUser.user_id
-  );
-
+  const savingsAccountsList = savingsAccounts ?? [];
   const totalWealth =
-    userAssets.reduce((sum, asset) => sum + asset.balance, 0) +
-    userSavings.reduce((sum, saving) => sum + saving.balance, 0);
-
-  const totalGoals = userGoals.reduce((sum, goal) => sum + goal.goal, 0);
+    assets.reduce((sum, asset) => sum + asset.balance, 0) +
+    savingsAccountsList.reduce((sum, saving) => sum + saving.balance, 0);
 
   const handleAdd = () => {
     setEditingGoal(null);
@@ -70,12 +61,7 @@ const Goals: React.FC = () => {
   };
 
   const handleDelete = (goalName: string) => {
-    dispatch(
-      deleteFinancialGoal({
-        user_id: currentUser.user_id,
-        goal_name: goalName,
-      })
-    );
+    dispatch(deleteFinancialGoal(goalName));
     message.success("Цель удалена");
   };
 
@@ -122,6 +108,11 @@ const Goals: React.FC = () => {
     return "🚀 Начало положено! Двигайтесь к цели!";
   };
 
+  const totalGoals = financialGoals.reduce((sum, goal) => sum + goal.goal, 0);
+  const achievedGoalsCount = financialGoals.filter(
+    (goal) => calculateProgress(goal.goal) >= 100
+  ).length;
+
   return (
     <div className={styles.goals}>
       <Row gutter={[24, 24]}>
@@ -166,7 +157,7 @@ const Goals: React.FC = () => {
             }
           >
             <Row gutter={[16, 16]}>
-              {userGoals.map((goal) => {
+              {financialGoals.map((goal) => {
                 const progress = calculateProgress(goal.goal);
                 const progressStatus = getProgressStatus(progress);
                 const motivationalMessage = getMotivationalMessage(progress);
@@ -250,7 +241,7 @@ const Goals: React.FC = () => {
               })}
             </Row>
 
-            {userGoals.length === 0 && (
+            {financialGoals.length === 0 && (
               <div className={styles.emptyState}>
                 <TagOutlined className={styles.emptyIcon} />
                 <p>У вас пока нет финансовых целей</p>
@@ -271,7 +262,7 @@ const Goals: React.FC = () => {
         </Col>
       </Row>
 
-      {userGoals.length > 0 && (
+    {financialGoals.length > 0 && (
         <Row style={{ marginTop: 24 }}>
           <Col span={24}>
             <Card title="Общий прогресс" size="small">
@@ -279,22 +270,18 @@ const Goals: React.FC = () => {
                 <div className={styles.overallStats}>
                   <div className={styles.statItem}>
                     <span className={styles.statLabel}>Целей поставлено:</span>
-                    <span className={styles.statValue}>{userGoals.length}</span>
+                    <span className={styles.statValue}>{financialGoals.length}</span>
                   </div>
                   <div className={styles.statItem}>
                     <span className={styles.statLabel}>Целей достигнуто:</span>
-                    <span className={styles.statValue}>
-                      {
-                        userGoals.filter(
-                          (goal) => calculateProgress(goal.goal) >= 100
-                        ).length
-                      }
-                    </span>
+                    <span className={styles.statValue}>{achievedGoalsCount}</span>
                   </div>
                   <div className={styles.statItem}>
                     <span className={styles.statLabel}>Общий прогресс:</span>
                     <span className={styles.statValue}>
-                      {((totalWealth / totalGoals) * 100).toFixed(1)}%
+                      {totalGoals > 0
+                        ? ((totalWealth / totalGoals) * 100).toFixed(1)
+                        : "0.0"}%
                     </span>
                   </div>
                 </div>

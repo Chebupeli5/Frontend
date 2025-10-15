@@ -21,14 +21,9 @@ import styles from "./Notifications.module.css";
 
 const Notifications: React.FC = () => {
   const dispatch = useAppDispatch();
-  const { currentUser } = useAppSelector((state) => state.auth);
   const { notifications } = useAppSelector((state) => state.app);
 
-  if (!currentUser) return null;
-
-  const userNotifications = notifications.filter(
-    (n) => n.user_id === currentUser.user_id
-  );
+  const hasNotifications = notifications.length > 0;
 
   const handleDeleteNotification = (index: number) => {
     dispatch(deleteNotification(index));
@@ -36,9 +31,9 @@ const Notifications: React.FC = () => {
   };
 
   const handleClearAll = () => {
-    userNotifications.forEach(() => {
-      dispatch(deleteNotification(0)); // Всегда удаляем первый элемент
-    });
+    for (let i = notifications.length - 1; i >= 0; i -= 1) {
+      dispatch(deleteNotification(i));
+    }
     message.success("Все уведомления удалены");
   };
 
@@ -57,13 +52,13 @@ const Notifications: React.FC = () => {
           <Space>
             <BellOutlined />
             Уведомления
-            {userNotifications.length > 0 && (
-              <Tag color="blue">{userNotifications.length}</Tag>
+            {hasNotifications && (
+              <Tag color="blue">{notifications.length}</Tag>
             )}
           </Space>
         }
         extra={
-          userNotifications.length > 0 && (
+          hasNotifications && (
             <Popconfirm
               title="Удалить все уведомления?"
               description="Это действие нельзя отменить"
@@ -78,7 +73,7 @@ const Notifications: React.FC = () => {
           )
         }
       >
-        {userNotifications.length === 0 ? (
+        {!hasNotifications ? (
           <div className={styles.emptyState}>
             <Empty
               image={<CheckCircleOutlined className={styles.emptyIcon} />}
@@ -94,7 +89,7 @@ const Notifications: React.FC = () => {
           </div>
         ) : (
           <List
-            dataSource={userNotifications}
+            dataSource={notifications}
             renderItem={(notification, index) => {
               const notificationType = getNotificationType(
                 notification.message
