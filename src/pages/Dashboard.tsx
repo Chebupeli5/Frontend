@@ -8,12 +8,15 @@ import {
   FallOutlined,
 } from "@ant-design/icons";
 import { useAppSelector } from "../hooks/redux";
+import { useGetOperationsQuery } from "../services/operationsApi";
 import styles from "./Dashboard.module.css";
 
 const Dashboard: React.FC = () => {
   const { currentUser } = useAppSelector((state) => state.auth);
-  const { categories, assets, savingsAccounts, loans, operations, categoryLimits } =
+  const { categories, assets, savingsAccounts, loans, categoryLimits } =
     useAppSelector((state) => state.app);
+  const { data: operations = [], isLoading: operationsLoading } =
+    useGetOperationsQuery();
 
   if (!currentUser) return null;
 
@@ -152,6 +155,7 @@ const Dashboard: React.FC = () => {
           <Card title="Последние операции">
             <List
               size="small"
+              loading={operationsLoading}
               dataSource={recentOperations}
               renderItem={(operation) => {
                 const category = categories.find(

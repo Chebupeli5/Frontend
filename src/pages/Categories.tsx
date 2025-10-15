@@ -29,6 +29,7 @@ import {
   deleteCategoryLimit,
 } from "../store/appSlice";
 import type { Category, CategoryLimit } from "../types";
+import { useGetOperationsQuery } from "../services/operationsApi";
 import styles from "./Categories.module.css";
 
 const Categories: React.FC = () => {
@@ -43,9 +44,8 @@ const Categories: React.FC = () => {
 
   const dispatch = useAppDispatch();
   const { currentUser } = useAppSelector((state) => state.auth);
-  const { categories, categoryLimits, operations } = useAppSelector(
-    (state) => state.app
-  );
+  const { categories, categoryLimits } = useAppSelector((state) => state.app);
+  const { data: operations = [] } = useGetOperationsQuery();
 
   if (!currentUser) return null;
 
@@ -84,7 +84,7 @@ const Categories: React.FC = () => {
 
   const handleDeleteCategory = (categoryId: number) => {
     dispatch(deleteCategory(categoryId));
-  dispatch(deleteCategoryLimit(categoryId));
+    dispatch(deleteCategoryLimit(categoryId));
     message.success("Категория удалена");
   };
 
@@ -95,7 +95,7 @@ const Categories: React.FC = () => {
     } else {
       const newCategory: Category = {
         category_id: Math.max(...categories.map((c) => c.category_id), 0) + 1,
-  user_id: currentUser.user_id,
+        user_id: currentUser.user_id,
         name: values.name,
         balance: values.balance || 0,
       };
@@ -121,7 +121,7 @@ const Categories: React.FC = () => {
   const handleLimitSubmit = (values: { limit: number }) => {
     if (selectedCategoryId) {
       const limitData: CategoryLimit = {
-  user_id: currentUser.user_id,
+        user_id: currentUser.user_id,
         category_id: selectedCategoryId,
         limit: values.limit,
       };

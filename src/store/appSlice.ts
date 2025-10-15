@@ -7,7 +7,6 @@ import type {
   Asset,
   FinancialGoal,
   Loan,
-  Operation,
   Notification,
 } from "../types";
 import {
@@ -16,7 +15,6 @@ import {
   mockAssets,
   mockFinancialGoals,
   mockLoans,
-  mockOperations,
   mockReports,
   mockNotifications,
   mockUsers,
@@ -29,7 +27,6 @@ const initialState: AppState = {
   assets: mockAssets,
   financialGoals: mockFinancialGoals,
   loans: mockLoans,
-  operations: mockOperations,
   reports: mockReports,
   notifications: mockNotifications,
 };
@@ -124,36 +121,6 @@ const appSlice = createSlice({
         (l) => l.credit_name !== action.payload
       );
     },
-
-    // Operations
-    addOperation: (state, action: PayloadAction<Operation>) => {
-      state.operations.push(action.payload);
-      // Update category balance
-      const category = state.categories.find(
-        (c) => c.category_id === action.payload.category_id
-      );
-      if (category) {
-        category.balance += action.payload.transaction;
-      }
-    },
-    deleteOperation: (state, action: PayloadAction<number>) => {
-      const operation = state.operations.find(
-        (o) => o.operation_id === action.payload
-      );
-      if (operation) {
-        // Revert category balance
-        const category = state.categories.find(
-          (c) => c.category_id === operation.category_id
-        );
-        if (category) {
-          category.balance -= operation.transaction;
-        }
-        state.operations = state.operations.filter(
-          (o) => o.operation_id !== action.payload
-        );
-      }
-    },
-
     // Notifications
     addNotification: (state, action: PayloadAction<Notification>) => {
       state.notifications.unshift(action.payload);
@@ -179,8 +146,6 @@ export const {
   addLoan,
   updateLoan,
   deleteLoan,
-  addOperation,
-  deleteOperation,
   addNotification,
   deleteNotification,
 } = appSlice.actions;

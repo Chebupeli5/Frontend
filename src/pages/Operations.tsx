@@ -17,23 +17,43 @@ import type { ColumnsType } from "antd/es/table";
 import { PlusOutlined, DeleteOutlined, EditOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useAppSelector, useAppDispatch } from "../hooks/redux";
-import { addOperation, deleteOperation } from "../store/appSlice";
 import { createNotification, checkLimitExceeded } from "../utils/notifications";
 import type { Operation } from "../types";
+import {
+  useGetOperationsQuery,
+  useCreateOperationMutation,
+  useUpdateOperationMutation,
+  useDeleteOperationMutation,
+} from "../services/operationsApi";
 import styles from "./Operations.module.css";
 
 const { Option } = Select;
 
 const Operations: React.FC = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [editingOperation, setEditingOperation] = useState<Operation | null>(
+    null
+  );
   const [form] = Form.useForm();
   const dispatch = useAppDispatch();
   const { currentUser } = useAppSelector((state) => state.auth);
-  const { operations, categories, categoryLimits } = useAppSelector(
-    (state) => state.app
-  );
+  const { categories, categoryLimits } = useAppSelector((state) => state.app);
+  const {
+    data: operations = [],
+    isLoading,
+    isFetching,
+  } = useGetOperationsQuery();
+  const [createOperation, { isLoading: isCreating }] =
+    useCreateOperationMutation();
+  const [updateOperation, { isLoading: isUpdating }] =
+    useUpdateOperationMutation();
+  const [deleteOperationMutation, { isLoading: isDeleting }] =
+    useDeleteOperationMutation();
 
   if (!currentUser) return null;
+
+  const isTableLoading = isLoading || isFetching;
+  const isProcessing = isCreating || isUpdating || isDeleting;
 
   const columns: ColumnsType<Operation> = [
     {
@@ -49,9 +69,7 @@ const Operations: React.FC = () => {
       dataIndex: "category_id",
       key: "category_id",
       render: (categoryId: number) => {
-        const category = categories.find(
-          (c) => c.category_id === categoryId
-        );
+        const category = categories.find((c) => c.category_id === categoryId);
         return category?.name || "Неизвестная категория";
       },
       filters: categories.map((c) => ({
@@ -83,8 +101,8 @@ const Operations: React.FC = () => {
         <span
           style={{ color: record.type === "income" ? "#52c41a" : "#f5222d" }}
         >
-          {record.type === "income" ? "+" : ""}
-          {amount.toLocaleString("ru-RU")} ₽
+          {record.type === "income" ? "+" : "-"}
+          {Math.abs(amount).toLocaleString("ru-RU")} ₽
         </span>
       ),
       sorter: (a, b) => Math.abs(a.transaction) - Math.abs(b.transaction),
@@ -115,85 +133,122 @@ const Operations: React.FC = () => {
   ];
 
   const handleAdd = () => {
+    setEditingOperation(null);
     form.resetFields();
     setIsModalVisible(true);
   };
 
   const handleEdit = (operation: Operation) => {
+    setEditingOperation(operation);
     form.setFieldsValue({
-      ...operation,
-      date: dayjs(operation.date),
+      type: operation.type,
+      category_id: operation.category_id,
       transaction: Math.abs(operation.transaction),
+      date: dayjs(operation.date),
     });
     setIsModalVisible(true);
   };
 
-  const handleDelete = (operationId: number) => {
-  dispatch(deleteOperation(operationId));
-    message.success("Операция удалена");
+  const handleDelete = async (operationId: number) => {
+    try {
+      await deleteOperationMutation(operationId).unwrap();
+      message.success("Операция удалена");
+    } catch {
+      message.error("Не удалось удалить операцию");
+    }
   };
 
-  const handleSubmit = (values: {
+  const handleSubmit = async (values: {
     type: "income" | "expense";
     category_id: number;
     transaction: number;
     date: dayjs.Dayjs;
   }) => {
-    const newOperation: Operation = {
-      operation_id: Math.max(...operations.map((o) => o.operation_id), 0) + 1,
-      user_id: currentUser.user_id,
+    const transactionAmount = Math.round(Number(values.transaction));
+    const payload = {
       category_id: values.category_id,
       type: values.type,
-      transaction:
-        values.type === "income" ? values.transaction : -values.transaction,
-      date: values.date.format("YYYY-MM-DD"),
+      transaction: transactionAmount,
+      date: values.date.format("DD.MM.YYYY"),
     };
 
-    dispatch(addOperation(newOperation));
+    try {
+      if (editingOperation) {
+        await updateOperation({
+          id: editingOperation.operation_id,
+          ...payload,
+        }).unwrap();
+        message.success("Операция обновлена");
+      } else {
+        const created = await createOperation(payload).unwrap();
 
-    // Проверка лимитов для расходов
-    if (values.type === "expense") {
-      const category = categories.find(
-        (c) => c.category_id === values.category_id
-      );
-      const limit = categoryLimits.find(
-        (cl) => cl.category_id === values.category_id
-      );
+        if (values.type === "expense") {
+          const category = categories.find(
+            (c) => c.category_id === values.category_id
+          );
+          const limit = categoryLimits.find(
+            (cl) => cl.category_id === values.category_id
+          );
 
-      if (category && limit) {
-        const monthlyExpenses =
-          operations
-            .filter(
-              (op) =>
-                op.category_id === values.category_id &&
-                op.type === "expense" &&
-                new Date(op.date).getMonth() === new Date().getMonth()
+          if (category && limit) {
+            const operationsWithCreated = operations.some(
+              (op) => op.operation_id === created.operation_id
             )
-            .reduce((sum, op) => sum + Math.abs(op.transaction), 0) +
-          values.transaction;
+              ? operations
+              : [...operations, created];
 
-        checkLimitExceeded(
-          dispatch,
-          currentUser.user_id,
-          category.name,
-          monthlyExpenses,
-          limit.limit
-        );
+            const now = new Date();
+
+            const monthlyExpenses = operationsWithCreated
+              .filter((op) => {
+                if (
+                  op.category_id !== values.category_id ||
+                  op.type !== "expense"
+                ) {
+                  return false;
+                }
+
+                const opDate = new Date(op.date);
+                return (
+                  opDate.getMonth() === now.getMonth() &&
+                  opDate.getFullYear() === now.getFullYear()
+                );
+              })
+              .reduce((sum, op) => sum + Math.abs(op.transaction), 0);
+
+            checkLimitExceeded(
+              dispatch,
+              currentUser.user_id,
+              category.name,
+              monthlyExpenses,
+              limit.limit
+            );
+          }
+        }
+
+        if (values.type === "income" && transactionAmount >= 10000) {
+          createNotification(
+            dispatch,
+            currentUser.user_id,
+            `Поступление дохода: +${transactionAmount.toLocaleString(
+              "ru-RU"
+            )} ₽`
+          );
+        }
+
+        message.success("Операция добавлена");
       }
-    }
 
-    // Уведомление о доходе
-    if (values.type === "income" && values.transaction >= 10000) {
-      createNotification(
-        dispatch,
-        currentUser.user_id,
-        `Поступление дохода: +${values.transaction.toLocaleString("ru-RU")} ₽`
+      setIsModalVisible(false);
+      setEditingOperation(null);
+      form.resetFields();
+    } catch {
+      message.error(
+        editingOperation
+          ? "Не удалось обновить операцию"
+          : "Не удалось добавить операцию"
       );
     }
-
-    message.success("Операция добавлена");
-    setIsModalVisible(false);
-    form.resetFields();
   };
 
   const totalIncome = operations
@@ -248,6 +303,7 @@ const Operations: React.FC = () => {
           columns={columns}
           dataSource={operations}
           rowKey="operation_id"
+          loading={isTableLoading}
           pagination={{
             pageSize: 10,
             showSizeChanger: true,
@@ -259,9 +315,15 @@ const Operations: React.FC = () => {
       </Card>
 
       <Modal
-        title="Добавить операцию"
+        title={
+          editingOperation ? "Редактировать операцию" : "Добавить операцию"
+        }
         open={isModalVisible}
-        onCancel={() => setIsModalVisible(false)}
+        onCancel={() => {
+          setIsModalVisible(false);
+          setEditingOperation(null);
+          form.resetFields();
+        }}
         footer={null}
         width={600}
       >
@@ -298,14 +360,18 @@ const Operations: React.FC = () => {
               { required: true, message: "Введите сумму" },
               {
                 type: "number",
-                min: 0.01,
+                min: 1,
                 message: "Сумма должна быть больше 0",
               },
             ]}
           >
             <InputNumber
+              min={1}
+              style={{ width: "100%" }}
               placeholder="Введите сумму"
-              formatter={(value) => `${value} ₽`}
+              formatter={(value) =>
+                value !== undefined && value !== null ? `${value} ₽` : ""
+              }
             />
           </Form.Item>
 
@@ -323,10 +389,18 @@ const Operations: React.FC = () => {
 
           <Form.Item>
             <Space>
-              <Button type="primary" htmlType="submit">
-                Добавить
+              <Button type="primary" htmlType="submit" loading={isProcessing}>
+                {editingOperation ? "Сохранить" : "Добавить"}
               </Button>
-              <Button onClick={() => setIsModalVisible(false)}>Отмена</Button>
+              <Button
+                onClick={() => {
+                  setIsModalVisible(false);
+                  setEditingOperation(null);
+                  form.resetFields();
+                }}
+              >
+                Отмена
+              </Button>
             </Space>
           </Form.Item>
         </Form>
