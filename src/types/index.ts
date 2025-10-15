@@ -36,9 +36,18 @@ export interface Asset {
 }
 
 export interface FinancialGoal {
+  id: number;
   user_id: number;
   goal_name: string;
   goal: number;
+  description?: string | null;
+  target_date?: string | null;
+  priority: "low" | "medium" | "high";
+  category?: string | null;
+  current_amount: number;
+  is_completed: boolean;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Loan {
@@ -87,7 +96,6 @@ export interface AppState {
   users: User[];
   savingsAccounts?: SavingsAccount[];
   assets: Asset[];
-  financialGoals: FinancialGoal[];
   loans: Loan[];
   reports: Report[];
   notifications: Notification[];

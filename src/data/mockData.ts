@@ -3,7 +3,6 @@ import type {
   Category,
   CategoryLimit,
   SavingsAccount,
-  FinancialGoal,
   Loan,
   Operation,
   Report,
@@ -61,12 +60,6 @@ export const mockSavingsAccounts: SavingsAccount[] = [
     balance: 320000,
     interest_rate: 9.1,
   },
-];
-
-export const mockFinancialGoals: FinancialGoal[] = [
-  { user_id: 1, goal_name: "Покупка квартиры", goal: 5000000 },
-  { user_id: 1, goal_name: "Образование детей", goal: 1500000 },
-  { user_id: 1, goal_name: "Пенсионные накопления", goal: 3000000 },
 ];
 
 export const mockLoans: Loan[] = [
