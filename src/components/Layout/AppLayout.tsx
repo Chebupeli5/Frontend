@@ -1,5 +1,5 @@
 import React from "react";
-import { Layout, Menu, Button, Avatar, Dropdown, Badge } from "antd";
+import { Layout, Menu, Button, Avatar, Dropdown, Badge, Spin } from "antd";
 import type { MenuProps } from "antd";
 import {
   DashboardOutlined,
@@ -16,6 +16,7 @@ import {
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../../hooks/redux";
 import { logout } from "../../store/authSlice";
+import { useLogoutMutation } from "../../services/authApi";
 import styles from "./AppLayout.module.css";
 
 const { Header, Sider, Content } = Layout;
@@ -24,12 +25,21 @@ const AppLayout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useAppDispatch();
-  const { currentUser } = useAppSelector((state) => state.auth);
+  const { currentUser, refreshToken } = useAppSelector((state) => state.auth);
   const notifications = useAppSelector((state) => state.app.notifications);
+  const [logoutRequest, { isLoading: isLoggingOut }] = useLogoutMutation();
 
-  const handleLogout = () => {
-    dispatch(logout());
-    navigate("/auth");
+  const handleLogout = async () => {
+    try {
+      if (refreshToken) {
+        await logoutRequest({ refreshToken }).unwrap();
+      }
+    } catch (error) {
+      console.error("Ошибка при выходе", error);
+    } finally {
+      dispatch(logout());
+      navigate("/auth");
+    }
   };
 
   const userMenuItems: MenuProps["items"] = [
@@ -48,9 +58,10 @@ const AppLayout: React.FC = () => {
     },
     {
       key: "logout",
-      label: "Выйти",
+      label: isLoggingOut ? "Выход..." : "Выйти",
       icon: <LogoutOutlined />,
       onClick: handleLogout,
+      disabled: isLoggingOut,
     },
   ];
 
@@ -95,6 +106,21 @@ const AppLayout: React.FC = () => {
   const handleMenuClick = ({ key }: { key: string }) => {
     navigate(key);
   };
+
+  if (!currentUser) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "100vh",
+        }}
+      >
+        <Spin size="large" />
+      </div>
+    );
+  }
 
   return (
     <Layout className={styles.layout}>
@@ -143,7 +169,11 @@ const AppLayout: React.FC = () => {
               </Badge>
               <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
                 <Button type="text" className={styles.userButton}>
-                  <Avatar icon={<UserOutlined />} />
+                  <Avatar icon={!currentUser.visualname ? <UserOutlined /> : undefined}>
+                    {currentUser.visualname
+                      ? currentUser.visualname.charAt(0).toUpperCase()
+                      : undefined}
+                  </Avatar>
                   <span className={styles.userName}>
                     {currentUser?.visualname}
                   </span>

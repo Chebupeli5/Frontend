@@ -1,8 +1,13 @@
 import React, { useState } from "react";
-import { Form, Input, Button, Card, message, Tabs } from "antd";
+import { Form, Input, Button, Card, message, Tabs, Spin } from "antd";
 import { UserOutlined, LockOutlined, MailOutlined } from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../../hooks/redux";
 import { loginStart, loginSuccess, loginFailure } from "../../store/authSlice";
+import {
+  useLoginMutation,
+  useSignupMutation,
+} from "../../services/authApi";
 import styles from "./Auth.module.css";
 
 const { TabPane } = Tabs;
@@ -10,26 +15,53 @@ const { TabPane } = Tabs;
 const Auth: React.FC = () => {
   const [activeTab, setActiveTab] = useState("login");
   const dispatch = useAppDispatch();
+  const navigate = useNavigate();
   const { loading } = useAppSelector((state) => state.auth);
-  const users = useAppSelector((state) => state.app.users);
+  const [login, { isLoading: isLoginLoading }] = useLoginMutation();
+  const [signup, { isLoading: isSignupLoading }] = useSignupMutation();
+
+  const resolveErrorMessage = (error: unknown) => {
+    if (error && typeof error === "object" && "data" in error) {
+      const data = (error as { data?: unknown }).data;
+      if (typeof data === "string") {
+        return data;
+      }
+      if (data && typeof data === "object" && "error" in data) {
+        const payload = (data as { error?: unknown }).error;
+        if (typeof payload === "string") return payload;
+        if (payload && typeof payload === "object" && "message" in payload) {
+          const msg = (payload as { message?: unknown }).message;
+          if (typeof msg === "string") return msg;
+        }
+      }
+    }
+    return "Произошла ошибка. Попробуйте еще раз";
+  };
 
   const onFinishLogin = (values: { login: string; password: string }) => {
     dispatch(loginStart());
 
-    // Имитация запроса к API
-    setTimeout(() => {
-      const user = users.find(
-        (u) => u.login === values.login && u.password === values.password
-      );
-
-      if (user) {
-        dispatch(loginSuccess(user));
+    login(values)
+      .unwrap()
+      .then((response) => {
+        dispatch(
+          loginSuccess({
+            user: {
+              user_id: response.user.id,
+              login: response.user.login,
+              visualname: response.user.visualname,
+            },
+            accessToken: response.accessToken,
+            refreshToken: response.refreshToken,
+          })
+        );
         message.success("Успешная авторизация!");
-      } else {
+        navigate("/");
+      })
+      .catch((error) => {
         dispatch(loginFailure());
-        message.error("Неверный логин или пароль");
-      }
-    }, 1000);
+        message.error(resolveErrorMessage(error));
+      });
   };
 
   const onFinishRegister = (values: {
@@ -39,27 +71,30 @@ const Auth: React.FC = () => {
   }) => {
     dispatch(loginStart());
 
-    // Имитация регистрации
-    setTimeout(() => {
-      const existingUser = users.find((u) => u.login === values.login);
-
-      if (existingUser) {
+    signup(values)
+      .unwrap()
+      .then((response) => {
+        dispatch(
+          loginSuccess({
+            user: {
+              user_id: response.user.id,
+              login: response.user.login,
+              visualname: response.user.visualname,
+            },
+            accessToken: response.accessToken,
+            refreshToken: response.refreshToken,
+          })
+        );
+        message.success("Регистрация прошла успешно!");
+        navigate("/");
+      })
+      .catch((error) => {
         dispatch(loginFailure());
-        message.error("Пользователь с таким email уже существует");
-        return;
-      }
-
-      const newUser = {
-        user_id: Math.max(...users.map((u) => u.user_id), 0) + 1,
-        login: values.login,
-        password: values.password,
-        visualname: values.visualname,
-      };
-
-      dispatch(loginSuccess(newUser));
-      message.success("Регистрация прошла успешно!");
-    }, 1000);
+        message.error(resolveErrorMessage(error));
+      });
   };
+
+  const isSubmitting = loading || isLoginLoading || isSignupLoading;
 
   return (
     <div className={styles.authContainer}>
@@ -83,6 +118,7 @@ const Auth: React.FC = () => {
                 <Input
                   prefix={<MailOutlined />}
                   placeholder="example@email.com"
+                  autoComplete="email"
                 />
               </Form.Item>
 
@@ -94,6 +130,7 @@ const Auth: React.FC = () => {
                 <Input.Password
                   prefix={<LockOutlined />}
                   placeholder="Пароль"
+                  autoComplete="current-password"
                 />
               </Form.Item>
 
@@ -101,7 +138,7 @@ const Auth: React.FC = () => {
                 <Button
                   type="primary"
                   htmlType="submit"
-                  loading={loading}
+                  loading={isSubmitting}
                   block
                 >
                   Войти
@@ -122,7 +159,11 @@ const Auth: React.FC = () => {
                 name="visualname"
                 rules={[{ required: true, message: "Введите ваше имя!" }]}
               >
-                <Input prefix={<UserOutlined />} placeholder="Ваше имя" />
+                <Input
+                  prefix={<UserOutlined />}
+                  placeholder="Ваше имя"
+                  autoComplete="name"
+                />
               </Form.Item>
 
               <Form.Item
@@ -136,6 +177,7 @@ const Auth: React.FC = () => {
                 <Input
                   prefix={<MailOutlined />}
                   placeholder="example@email.com"
+                  autoComplete="email"
                 />
               </Form.Item>
 
@@ -153,6 +195,7 @@ const Auth: React.FC = () => {
                 <Input.Password
                   prefix={<LockOutlined />}
                   placeholder="Пароль"
+                  autoComplete="new-password"
                 />
               </Form.Item>
 
@@ -160,7 +203,7 @@ const Auth: React.FC = () => {
                 <Button
                   type="primary"
                   htmlType="submit"
-                  loading={loading}
+                  loading={isSubmitting}
                   block
                 >
                   Зарегистрироваться
@@ -169,6 +212,11 @@ const Auth: React.FC = () => {
             </Form>
           </TabPane>
         </Tabs>
+        {isSubmitting && (
+          <div className={styles.overlay}>
+            <Spin size="large" />
+          </div>
+        )}
       </Card>
     </div>
   );

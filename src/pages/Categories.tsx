@@ -93,7 +93,6 @@ const Categories: React.FC = () => {
 
   const handleDeleteCategory = (categoryId: number) => {
     dispatch(deleteCategory(categoryId));
-    // Удаляем также лимит для этой категории
     dispatch(
       deleteCategoryLimit({
         user_id: currentUser.user_id,
