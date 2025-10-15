@@ -25,6 +25,10 @@ import {
   useUpdateOperationMutation,
   useDeleteOperationMutation,
 } from "../services/operationsApi";
+import {
+  useGetCategoriesQuery,
+  useGetCategoryLimitsQuery,
+} from "../services/categoriesApi";
 import styles from "./Operations.module.css";
 
 const { Option } = Select;
@@ -37,7 +41,16 @@ const Operations: React.FC = () => {
   const [form] = Form.useForm();
   const dispatch = useAppDispatch();
   const { currentUser } = useAppSelector((state) => state.auth);
-  const { categories, categoryLimits } = useAppSelector((state) => state.app);
+  const {
+    data: categoriesData,
+    isLoading: categoriesLoading,
+    isFetching: categoriesFetching,
+  } = useGetCategoriesQuery();
+  const {
+    data: categoryLimitsData,
+    isLoading: limitsLoading,
+    isFetching: limitsFetching,
+  } = useGetCategoryLimitsQuery();
   const {
     data: operations = [],
     isLoading,
@@ -52,8 +65,30 @@ const Operations: React.FC = () => {
 
   if (!currentUser) return null;
 
-  const isTableLoading = isLoading || isFetching;
+  const categories = categoriesData ?? [];
+  const categoryLimits = categoryLimitsData ?? [];
+  const isDataLoading =
+    isLoading ||
+    isFetching ||
+    categoriesLoading ||
+    categoriesFetching ||
+    limitsLoading ||
+    limitsFetching;
   const isProcessing = isCreating || isUpdating || isDeleting;
+
+  const getLimitForCategory = (categoryId: number) => {
+    const category = categories.find((c) => c.category_id === categoryId);
+    const limitRecord = categoryLimits.find(
+      (cl) => cl.category_id === categoryId
+    );
+    if (limitRecord?.limit !== undefined) {
+      return limitRecord.limit;
+    }
+    if (category?.limit !== undefined && category.limit !== null) {
+      return category.limit;
+    }
+    return undefined;
+  };
 
   const columns: ColumnsType<Operation> = [
     {
@@ -186,11 +221,9 @@ const Operations: React.FC = () => {
           const category = categories.find(
             (c) => c.category_id === values.category_id
           );
-          const limit = categoryLimits.find(
-            (cl) => cl.category_id === values.category_id
-          );
+          const limitValue = getLimitForCategory(values.category_id);
 
-          if (category && limit) {
+          if (category && limitValue !== undefined) {
             const operationsWithCreated = operations.some(
               (op) => op.operation_id === created.operation_id
             )
@@ -221,7 +254,7 @@ const Operations: React.FC = () => {
               currentUser.user_id,
               category.name,
               monthlyExpenses,
-              limit.limit
+              limitValue
             );
           }
         }
@@ -303,7 +336,7 @@ const Operations: React.FC = () => {
           columns={columns}
           dataSource={operations}
           rowKey="operation_id"
-          loading={isTableLoading}
+          loading={isDataLoading}
           pagination={{
             pageSize: 10,
             showSizeChanger: true,

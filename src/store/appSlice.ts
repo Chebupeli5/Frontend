@@ -2,16 +2,12 @@ import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
 import type {
   AppState,
-  Category,
-  CategoryLimit,
   Asset,
   FinancialGoal,
   Loan,
   Notification,
 } from "../types";
 import {
-  mockCategories,
-  mockCategoryLimits,
   mockAssets,
   mockFinancialGoals,
   mockLoans,
@@ -22,8 +18,6 @@ import {
 
 const initialState: AppState = {
   users: mockUsers,
-  categories: mockCategories,
-  categoryLimits: mockCategoryLimits,
   assets: mockAssets,
   financialGoals: mockFinancialGoals,
   loans: mockLoans,
@@ -35,41 +29,6 @@ const appSlice = createSlice({
   name: "app",
   initialState,
   reducers: {
-    // Categories
-    addCategory: (state, action: PayloadAction<Category>) => {
-      state.categories.push(action.payload);
-    },
-    updateCategory: (state, action: PayloadAction<Category>) => {
-      const index = state.categories.findIndex(
-        (c) => c.category_id === action.payload.category_id
-      );
-      if (index !== -1) {
-        state.categories[index] = action.payload;
-      }
-    },
-    deleteCategory: (state, action: PayloadAction<number>) => {
-      state.categories = state.categories.filter(
-        (c) => c.category_id !== action.payload
-      );
-    },
-
-    // Category Limits
-    addCategoryLimit: (state, action: PayloadAction<CategoryLimit>) => {
-      const existingIndex = state.categoryLimits.findIndex(
-        (cl) => cl.category_id === action.payload.category_id
-      );
-      if (existingIndex !== -1) {
-        state.categoryLimits[existingIndex] = action.payload;
-      } else {
-        state.categoryLimits.push(action.payload);
-      }
-    },
-    deleteCategoryLimit: (state, action: PayloadAction<number>) => {
-      state.categoryLimits = state.categoryLimits.filter(
-        (cl) => cl.category_id !== action.payload
-      );
-    },
-
     // Assets
     addAsset: (state, action: PayloadAction<Asset>) => {
       state.assets.push(action.payload);
@@ -132,11 +91,6 @@ const appSlice = createSlice({
 });
 
 export const {
-  addCategory,
-  updateCategory,
-  deleteCategory,
-  addCategoryLimit,
-  deleteCategoryLimit,
   addAsset,
   updateAsset,
   deleteAsset,
