@@ -20,16 +20,19 @@ import {
   DeleteOutlined,
   SettingOutlined,
 } from "@ant-design/icons";
-import { useAppSelector, useAppDispatch } from "../hooks/redux";
-import {
-  addCategory,
-  updateCategory,
-  deleteCategory,
-  addCategoryLimit,
-  deleteCategoryLimit,
-} from "../store/appSlice";
-import type { Category, CategoryLimit } from "../types";
+import { useAppSelector } from "../hooks/redux";
+import type { Category } from "../types";
 import { useGetOperationsQuery } from "../services/operationsApi";
+import {
+  useGetCategoriesQuery,
+  useCreateCategoryMutation,
+  useUpdateCategoryMutation,
+  useDeleteCategoryMutation,
+  useGetCategoryLimitsQuery,
+  useCreateCategoryLimitMutation,
+  useUpdateCategoryLimitMutation,
+  useDeleteCategoryLimitMutation,
+} from "../services/categoriesApi";
 import styles from "./Categories.module.css";
 
 const Categories: React.FC = () => {
@@ -42,31 +45,62 @@ const Categories: React.FC = () => {
   const [categoryForm] = Form.useForm();
   const [limitForm] = Form.useForm();
 
-  const dispatch = useAppDispatch();
   const { currentUser } = useAppSelector((state) => state.auth);
-  const { categories, categoryLimits } = useAppSelector((state) => state.app);
+  const {
+    data: categoriesData,
+    isLoading: categoriesLoading,
+    isFetching: categoriesFetching,
+  } = useGetCategoriesQuery();
+  const {
+    data: categoryLimitsData,
+    isLoading: limitsLoading,
+    isFetching: limitsFetching,
+  } = useGetCategoryLimitsQuery();
   const { data: operations = [] } = useGetOperationsQuery();
+  const [createCategory, { isLoading: isCreatingCategory }] =
+    useCreateCategoryMutation();
+  const [updateCategory, { isLoading: isUpdatingCategory }] =
+    useUpdateCategoryMutation();
+  const [deleteCategory] = useDeleteCategoryMutation();
+  const [createCategoryLimit, { isLoading: isCreatingLimit }] =
+    useCreateCategoryLimitMutation();
+  const [updateCategoryLimit, { isLoading: isUpdatingLimit }] =
+    useUpdateCategoryLimitMutation();
+  const [deleteCategoryLimit] = useDeleteCategoryLimitMutation();
 
   if (!currentUser) return null;
 
+  const categories = categoriesData ?? [];
+  const categoryLimits = categoryLimitsData ?? [];
+  const isLoadingData =
+    categoriesLoading || categoriesFetching || limitsLoading || limitsFetching;
+  const isSavingCategory = isCreatingCategory || isUpdatingCategory;
+  const isSavingLimit = isCreatingLimit || isUpdatingLimit;
+
   const getCategoryData = (category: Category) => {
-    const limit = categoryLimits.find((l) => l.category_id === category.category_id);
+    const limitRecord = categoryLimits.find(
+      (l) => l.category_id === category.category_id
+    );
+    const rawLimit = limitRecord?.limit ?? category.limit;
+    const hasLimit = rawLimit !== undefined && rawLimit !== null;
+    const limitValue = hasLimit ? rawLimit! : 0;
     const monthlyExpenses = operations
       .filter(
         (op) =>
           op.category_id === category.category_id &&
           op.type === "expense" &&
-          new Date(op.date).getMonth() === new Date().getMonth()
+          new Date(op.date).getMonth() === new Date().getMonth() &&
+          new Date(op.date).getFullYear() === new Date().getFullYear()
       )
       .reduce((sum, op) => sum + Math.abs(op.transaction), 0);
 
-    const percentage = limit ? (monthlyExpenses / limit.limit) * 100 : 0;
+    const percentage = limitValue ? (monthlyExpenses / limitValue) * 100 : 0;
 
     return {
-      limit: limit?.limit || 0,
+      limit: limitValue,
       spent: monthlyExpenses,
       percentage: Math.min(percentage, 100),
-      hasLimit: !!limit,
+      hasLimit,
     };
   };
 
@@ -82,34 +116,55 @@ const Categories: React.FC = () => {
     setIsCategoryModalVisible(true);
   };
 
-  const handleDeleteCategory = (categoryId: number) => {
-    dispatch(deleteCategory(categoryId));
-    dispatch(deleteCategoryLimit(categoryId));
-    message.success("Категория удалена");
+  const handleDeleteCategory = async (categoryId: number) => {
+    try {
+      const limit = categoryLimits.find(
+        (l) => l.category_id === categoryId && l.id !== undefined
+      );
+      if (limit?.id) {
+        await deleteCategoryLimit(limit.id).unwrap();
+      }
+      await deleteCategory(categoryId).unwrap();
+      message.success("Категория удалена");
+    } catch {
+      message.error("Не удалось удалить категорию");
+    }
   };
 
-  const handleCategorySubmit = (values: { name: string; balance: number }) => {
-    if (editingCategory) {
-      dispatch(updateCategory({ ...editingCategory, ...values }));
-      message.success("Категория обновлена");
-    } else {
-      const newCategory: Category = {
-        category_id: Math.max(...categories.map((c) => c.category_id), 0) + 1,
-        user_id: currentUser.user_id,
-        name: values.name,
-        balance: values.balance || 0,
-      };
-      dispatch(addCategory(newCategory));
-      message.success("Категория добавлена");
+  const handleCategorySubmit = async (values: {
+    name: string;
+    balance: number;
+  }) => {
+    const payload = {
+      name: values.name,
+      balance: values.balance ?? 0,
+    };
+
+    try {
+      if (editingCategory) {
+        await updateCategory({
+          id: editingCategory.category_id,
+          ...payload,
+        }).unwrap();
+        message.success("Категория обновлена");
+      } else {
+        await createCategory(payload).unwrap();
+        message.success("Категория добавлена");
+      }
+      setIsCategoryModalVisible(false);
+      categoryForm.resetFields();
+    } catch {
+      message.error(
+        editingCategory
+          ? "Не удалось обновить категорию"
+          : "Не удалось добавить категорию"
+      );
     }
-    setIsCategoryModalVisible(false);
-    categoryForm.resetFields();
   };
 
   const handleSetLimit = (categoryId: number) => {
     const category = categories.find((c) => c.category_id === categoryId);
     const limit = categoryLimits.find((l) => l.category_id === categoryId);
-
     setSelectedCategoryId(categoryId);
     limitForm.setFieldsValue({
       category_name: category?.name,
@@ -118,17 +173,30 @@ const Categories: React.FC = () => {
     setIsLimitModalVisible(true);
   };
 
-  const handleLimitSubmit = (values: { limit: number }) => {
-    if (selectedCategoryId) {
-      const limitData: CategoryLimit = {
-        user_id: currentUser.user_id,
-        category_id: selectedCategoryId,
-        limit: values.limit,
-      };
-      dispatch(addCategoryLimit(limitData));
-      message.success("Лимит установлен");
+  const handleLimitSubmit = async (values: { limit: number }) => {
+    if (!selectedCategoryId) return;
+    const existingLimit = categoryLimits.find(
+      (l) => l.category_id === selectedCategoryId
+    );
+    try {
+      if (existingLimit?.id) {
+        await updateCategoryLimit({
+          id: existingLimit.id,
+          limit: values.limit,
+          category_id: selectedCategoryId,
+        }).unwrap();
+        message.success("Лимит обновлен");
+      } else {
+        await createCategoryLimit({
+          category_id: selectedCategoryId,
+          limit: values.limit,
+        }).unwrap();
+        message.success("Лимит установлен");
+      }
       setIsLimitModalVisible(false);
       limitForm.resetFields();
+    } catch {
+      message.error("Не удалось сохранить лимит");
     }
   };
 
@@ -141,114 +209,126 @@ const Categories: React.FC = () => {
             type="primary"
             icon={<PlusOutlined />}
             onClick={handleAddCategory}
+            disabled={isLoadingData}
           >
             Добавить категорию
           </Button>
         }
+        loading={isLoadingData}
       >
-        <Row gutter={[16, 16]}>
-          {categories.map((category) => {
-            const categoryData = getCategoryData(category);
+        {isLoadingData ? (
+          <div style={{ textAlign: "center", padding: "40px 0" }}>
+            <span>Загрузка данных...</span>
+          </div>
+        ) : (
+          <Row gutter={[16, 16]}>
+            {categories.map((category) => {
+              const categoryData = getCategoryData(category);
 
-            return (
-              <Col xs={24} sm={12} lg={8} xl={6} key={category.category_id}>
-                <Card
-                  size="small"
-                  className={styles.categoryCard}
-                  actions={[
-                    <Button
-                      type="text"
-                      icon={<SettingOutlined />}
-                      onClick={() => handleSetLimit(category.category_id)}
-                      title="Установить лимит"
-                    />,
-                    <Button
-                      type="text"
-                      icon={<EditOutlined />}
-                      onClick={() => handleEditCategory(category)}
-                      title="Редактировать"
-                    />,
-                    <Popconfirm
-                      title="Удалить категорию?"
-                      description="Это действие нельзя отменить"
-                      onConfirm={() =>
-                        handleDeleteCategory(category.category_id)
-                      }
-                      okText="Да"
-                      cancelText="Нет"
-                    >
+              return (
+                <Col xs={24} sm={12} lg={8} xl={6} key={category.category_id}>
+                  <Card
+                    size="small"
+                    className={styles.categoryCard}
+                    actions={[
                       <Button
                         type="text"
-                        danger
-                        icon={<DeleteOutlined />}
-                        title="Удалить"
-                      />
-                    </Popconfirm>,
-                  ]}
-                >
-                  <div className={styles.categoryHeader}>
-                    <h4 className={styles.categoryName}>{category.name}</h4>
-                  </div>
-
-                  <div className={styles.categoryStats}>
-                    <Statistic
-                      title="Баланс"
-                      value={Math.abs(category.balance)}
-                      precision={0}
-                      suffix="₽"
-                      valueStyle={{
-                        fontSize: "16px",
-                        color: category.balance >= 0 ? "#52c41a" : "#f5222d",
-                      }}
-                    />
-                  </div>
-
-                  {categoryData.hasLimit && (
-                    <div className={styles.limitSection}>
-                      <div className={styles.limitHeader}>
-                        <span className={styles.limitTitle}>
-                          Лимит на месяц
-                        </span>
-                        <span className={styles.limitAmount}>
-                          {categoryData.spent.toLocaleString("ru-RU")} /{" "}
-                          {categoryData.limit.toLocaleString("ru-RU")} ₽
-                        </span>
-                      </div>
-                      <Progress
-                        percent={categoryData.percentage}
-                        status={
-                          categoryData.percentage > 90
-                            ? "exception"
-                            : categoryData.percentage > 70
-                            ? "active"
-                            : "normal"
-                        }
-                        showInfo={false}
-                        strokeWidth={8}
-                      />
-                      <div className={styles.limitProgress}>
-                        {categoryData.percentage.toFixed(1)}% использовано
-                      </div>
-                    </div>
-                  )}
-
-                  {!categoryData.hasLimit && (
-                    <div className={styles.noLimit}>
-                      <Button
-                        type="dashed"
-                        size="small"
-                        block
+                        icon={<SettingOutlined />}
                         onClick={() => handleSetLimit(category.category_id)}
+                        title="Установить лимит"
+                        disabled={isLoadingData}
+                      />,
+                      <Button
+                        type="text"
+                        icon={<EditOutlined />}
+                        onClick={() => handleEditCategory(category)}
+                        title="Редактировать"
+                        disabled={isLoadingData}
+                      />,
+                      <Popconfirm
+                        title="Удалить категорию?"
+                        description="Это действие нельзя отменить"
+                        onConfirm={() =>
+                          handleDeleteCategory(category.category_id)
+                        }
+                        okText="Да"
+                        cancelText="Нет"
+                        disabled={isLoadingData}
                       >
-                        Установить лимит
-                      </Button>
+                        <Button
+                          type="text"
+                          danger
+                          icon={<DeleteOutlined />}
+                          title="Удалить"
+                          disabled={isLoadingData}
+                        />
+                      </Popconfirm>,
+                    ]}
+                  >
+                    <div className={styles.categoryHeader}>
+                      <h4 className={styles.categoryName}>{category.name}</h4>
                     </div>
-                  )}
-                </Card>
-              </Col>
-            );
-          })}
-        </Row>
+
+                    <div className={styles.categoryStats}>
+                      <Statistic
+                        title="Баланс"
+                        value={Math.abs(category.balance)}
+                        precision={0}
+                        suffix="₽"
+                        valueStyle={{
+                          fontSize: "16px",
+                          color: category.balance >= 0 ? "#52c41a" : "#f5222d",
+                        }}
+                      />
+                    </div>
+
+                    {categoryData.hasLimit && (
+                      <div className={styles.limitSection}>
+                        <div className={styles.limitHeader}>
+                          <span className={styles.limitTitle}>
+                            Лимит на месяц
+                          </span>
+                          <span className={styles.limitAmount}>
+                            {categoryData.spent.toLocaleString("ru-RU")} /{" "}
+                            {categoryData.limit.toLocaleString("ru-RU")} ₽
+                          </span>
+                        </div>
+                        <Progress
+                          percent={categoryData.percentage}
+                          status={
+                            categoryData.percentage > 90
+                              ? "exception"
+                              : categoryData.percentage > 70
+                              ? "active"
+                              : "normal"
+                          }
+                          showInfo={false}
+                          strokeWidth={8}
+                        />
+                        <div className={styles.limitProgress}>
+                          {categoryData.percentage.toFixed(1)}% использовано
+                        </div>
+                      </div>
+                    )}
+
+                    {!categoryData.hasLimit && (
+                      <div className={styles.noLimit}>
+                        <Button
+                          type="dashed"
+                          size="small"
+                          block
+                          onClick={() => handleSetLimit(category.category_id)}
+                        >
+                          Установить лимит
+                        </Button>
+                      </div>
+                    )}
+                  </Card>
+                </Col>
+              );
+            })}
+          </Row>
+        )}
       </Card>
 
       {/* Модал добавления/редактирования категории */}
@@ -259,6 +339,7 @@ const Categories: React.FC = () => {
         open={isCategoryModalVisible}
         onCancel={() => setIsCategoryModalVisible(false)}
         footer={null}
+        confirmLoading={isSavingCategory}
       >
         <Form
           form={categoryForm}
@@ -287,7 +368,11 @@ const Categories: React.FC = () => {
 
           <Form.Item>
             <Space>
-              <Button type="primary" htmlType="submit">
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={isSavingCategory}
+              >
                 {editingCategory ? "Обновить" : "Добавить"}
               </Button>
               <Button onClick={() => setIsCategoryModalVisible(false)}>
@@ -304,6 +389,7 @@ const Categories: React.FC = () => {
         open={isLimitModalVisible}
         onCancel={() => setIsLimitModalVisible(false)}
         footer={null}
+        confirmLoading={isSavingLimit}
       >
         <Form form={limitForm} layout="vertical" onFinish={handleLimitSubmit}>
           <Form.Item label="Категория" name="category_name">
@@ -331,7 +417,7 @@ const Categories: React.FC = () => {
 
           <Form.Item>
             <Space>
-              <Button type="primary" htmlType="submit">
+              <Button type="primary" htmlType="submit" loading={isSavingLimit}>
                 Установить
               </Button>
               <Button onClick={() => setIsLimitModalVisible(false)}>

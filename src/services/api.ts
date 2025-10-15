@@ -66,6 +66,7 @@ export const api = createApi({
   tagTypes: [
     "User",
     "Categories",
+    "CategoryLimits",
     "Assets",
     "SavingsAccounts",
     "Operations",

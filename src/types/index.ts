@@ -10,9 +10,11 @@ export interface Category {
   user_id: number;
   name: string;
   balance: number;
+  limit?: number | null;
 }
 
 export interface CategoryLimit {
+  id?: number;
   user_id: number;
   category_id: number;
   limit: number;
@@ -82,8 +84,6 @@ export interface AuthState {
 
 export interface AppState {
   users: User[];
-  categories: Category[];
-  categoryLimits: CategoryLimit[];
   savingsAccounts?: SavingsAccount[];
   assets: Asset[];
   financialGoals: FinancialGoal[];
