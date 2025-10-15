@@ -12,4 +12,16 @@
   max-width: 400px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
   border-radius: 8px;
+  position: relative;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  backdrop-filter: blur(2px);
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 8px;
 }

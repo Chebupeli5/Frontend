@@ -1,7 +1,7 @@
 export interface User {
   user_id: number;
   login: string;
-  password: string;
+  password?: string;
   visualname: string;
 }
 
@@ -68,6 +68,8 @@ export interface AuthState {
   isAuthenticated: boolean;
   currentUser: User | null;
   loading: boolean;
+  accessToken: string | null;
+  refreshToken: string | null;
 }
 
 export interface AppState {
