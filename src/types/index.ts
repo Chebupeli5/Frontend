@@ -53,6 +53,13 @@ export interface Operation {
   type: "income" | "expense";
   transaction: number;
   date: string;
+  description?: string | null;
+  tags?: string | null;
+  is_recurring?: boolean;
+  recurring_frequency?: "daily" | "weekly" | "monthly" | "yearly" | null;
+  recurring_end_date?: string | null;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Report {
@@ -81,7 +88,6 @@ export interface AppState {
   assets: Asset[];
   financialGoals: FinancialGoal[];
   loans: Loan[];
-  operations: Operation[];
   reports: Report[];
   notifications: Notification[];
 }
