@@ -19,6 +19,7 @@ export interface CategoryLimit {
 }
 
 export interface SavingsAccount {
+  id: number;
   user_id: number;
   saving_name: string;
   balance: number;
@@ -76,7 +77,7 @@ export interface AppState {
   users: User[];
   categories: Category[];
   categoryLimits: CategoryLimit[];
-  savingsAccounts: SavingsAccount[];
+  savingsAccounts?: SavingsAccount[];
   assets: Asset[];
   financialGoals: FinancialGoal[];
   loans: Loan[];

@@ -153,11 +153,7 @@ const AppLayout: React.FC = () => {
             </div>
             <div className={styles.headerActions}>
               <Badge
-                count={
-                  notifications.filter(
-                    (n) => n.user_id === currentUser?.user_id
-                  ).length
-                }
+                count={notifications.length}
                 className={styles.notificationBadge}
               >
                 <Button

@@ -40,9 +40,8 @@ const Loans: React.FC = () => {
 
   if (!currentUser) return null;
 
-  const userLoans = loans.filter((l) => l.user_id === currentUser.user_id);
-  const totalDebt = userLoans.reduce((sum, loan) => sum + loan.loan_balance, 0);
-  const totalMonthlyPayment = userLoans.reduce(
+  const totalDebt = loans.reduce((sum, loan) => sum + loan.loan_balance, 0);
+  const totalMonthlyPayment = loans.reduce(
     (sum, loan) => sum + loan.loan_payment,
     0
   );
@@ -63,12 +62,7 @@ const Loans: React.FC = () => {
   };
 
   const handleDelete = (creditName: string) => {
-    dispatch(
-      deleteLoan({
-        user_id: currentUser.user_id,
-        credit_name: creditName,
-      })
-    );
+    dispatch(deleteLoan(creditName));
     message.success("Кредит удалён");
   };
 
@@ -152,7 +146,7 @@ const Loans: React.FC = () => {
             <Alert
               message="Помните о своих финансовых обязательствах"
               description={`У вас ${
-                userLoans.length
+                loans.length
               } активных кредитов на общую сумму ${totalDebt.toLocaleString(
                 "ru-RU"
               )} ₽. Следите за датами платежей.`}
@@ -178,7 +172,7 @@ const Loans: React.FC = () => {
             }
           >
             <Row gutter={[16, 16]}>
-              {userLoans.map((loan) => {
+              {loans.map((loan) => {
                 const daysUntil = getDaysUntilPayment(loan.payment_date);
                 const paymentStatus = getPaymentStatus(daysUntil);
                 const monthsLeft = Math.ceil(
@@ -295,7 +289,7 @@ const Loans: React.FC = () => {
               })}
             </Row>
 
-            {userLoans.length === 0 && (
+            {loans.length === 0 && (
               <div className={styles.emptyState}>
                 <CreditCardOutlined className={styles.emptyIcon} />
                 <p>У вас нет активных кредитов</p>

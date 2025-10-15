@@ -36,11 +36,7 @@ const Assets: React.FC = () => {
 
   if (!currentUser) return null;
 
-  const userAssets = assets.filter((a) => a.user_id === currentUser.user_id);
-  const totalBalance = userAssets.reduce(
-    (sum, asset) => sum + asset.balance,
-    0
-  );
+  const totalBalance = assets.reduce((sum, asset) => sum + asset.balance, 0);
 
   const handleAdd = () => {
     setEditingAsset(null);
@@ -55,12 +51,7 @@ const Assets: React.FC = () => {
   };
 
   const handleDelete = (assetKey: string) => {
-    dispatch(
-      deleteAsset({
-        user_id: currentUser.user_id,
-        name: assetKey,
-      })
-    );
+    dispatch(deleteAsset(assetKey));
     message.success("Счёт удалён");
   };
 
@@ -119,7 +110,7 @@ const Assets: React.FC = () => {
             }
           >
             <Row gutter={[16, 16]}>
-              {userAssets.map((asset) => (
+              {assets.map((asset) => (
                 <Col xs={24} sm={12} lg={8} xl={6} key={asset.name}>
                   <Card
                     size="small"
@@ -168,7 +159,7 @@ const Assets: React.FC = () => {
               ))}
             </Row>
 
-            {userAssets.length === 0 && (
+            {assets.length === 0 && (
               <div className={styles.emptyState}>
                 <CreditCardOutlined className={styles.emptyIcon} />
                 <p>У вас пока нет счетов</p>
