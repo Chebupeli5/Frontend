@@ -1,14 +1,7 @@
 import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
-import type {
-  AppState,
-  Asset,
-  FinancialGoal,
-  Loan,
-  Notification,
-} from "../types";
+import type { AppState, FinancialGoal, Loan, Notification } from "../types";
 import {
-  mockAssets,
   mockFinancialGoals,
   mockLoans,
   mockReports,
@@ -18,7 +11,7 @@ import {
 
 const initialState: AppState = {
   users: mockUsers,
-  assets: mockAssets,
+  assets: [],
   financialGoals: mockFinancialGoals,
   loans: mockLoans,
   reports: mockReports,
@@ -29,22 +22,6 @@ const appSlice = createSlice({
   name: "app",
   initialState,
   reducers: {
-    // Assets
-    addAsset: (state, action: PayloadAction<Asset>) => {
-      state.assets.push(action.payload);
-    },
-    updateAsset: (state, action: PayloadAction<Asset>) => {
-      const index = state.assets.findIndex(
-        (a) => a.name === action.payload.name
-      );
-      if (index !== -1) {
-        state.assets[index] = action.payload;
-      }
-    },
-    deleteAsset: (state, action: PayloadAction<string>) => {
-      state.assets = state.assets.filter((a) => a.name !== action.payload);
-    },
-
     // Financial Goals
     addFinancialGoal: (state, action: PayloadAction<FinancialGoal>) => {
       state.financialGoals.push(action.payload);
@@ -91,9 +68,6 @@ const appSlice = createSlice({
 });
 
 export const {
-  addAsset,
-  updateAsset,
-  deleteAsset,
   addFinancialGoal,
   updateFinancialGoal,
   deleteFinancialGoal,

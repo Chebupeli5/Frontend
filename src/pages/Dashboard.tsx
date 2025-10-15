@@ -14,11 +14,12 @@ import {
   useGetCategoryLimitsQuery,
 } from "../services/categoriesApi";
 import { useGetSavingsAccountsQuery } from "../services/savingsAccountsApi";
+import { useGetAssetsQuery } from "../services/assetsApi";
 import styles from "./Dashboard.module.css";
 
 const Dashboard: React.FC = () => {
   const { currentUser } = useAppSelector((state) => state.auth);
-  const { assets, loans } = useAppSelector((state) => state.app);
+  const { loans } = useAppSelector((state) => state.app);
   const {
     data: categoriesData,
     isLoading: categoriesLoading,
@@ -34,6 +35,12 @@ const Dashboard: React.FC = () => {
     isLoading: savingsLoading,
     isFetching: savingsFetching,
   } = useGetSavingsAccountsQuery();
+  const shouldSkipAssetsQuery = !currentUser;
+  const {
+    data: assetsData,
+    isLoading: assetsLoading,
+    isFetching: assetsFetching,
+  } = useGetAssetsQuery(undefined, { skip: shouldSkipAssetsQuery });
   const {
     data: operations = [],
     isLoading: operationsLoading,
@@ -45,6 +52,7 @@ const Dashboard: React.FC = () => {
   const categories = categoriesData ?? [];
   const categoryLimits = limitsData ?? [];
   const savingsAccounts = savingsAccountsData ?? [];
+  const assets = assetsData ?? [];
   const isDataLoading =
     categoriesLoading ||
     categoriesFetching ||
@@ -53,7 +61,9 @@ const Dashboard: React.FC = () => {
     operationsLoading ||
     operationsFetching ||
     savingsLoading ||
-    savingsFetching;
+    savingsFetching ||
+    assetsLoading ||
+    assetsFetching;
 
   const totalAssets = assets.reduce((sum, asset) => sum + asset.balance, 0);
   const totalSavings = savingsAccounts.reduce(

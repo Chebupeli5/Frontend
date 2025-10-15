@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   Row,
   Col,
@@ -12,6 +12,7 @@ import {
   message,
   Popconfirm,
   Statistic,
+  Spin,
 } from "antd";
 import {
   PlusOutlined,
@@ -20,9 +21,14 @@ import {
   CreditCardOutlined,
   BankOutlined,
 } from "@ant-design/icons";
-import { useAppSelector, useAppDispatch } from "../hooks/redux";
-import { addAsset, updateAsset, deleteAsset } from "../store/appSlice";
+import { useAppSelector } from "../hooks/redux";
 import type { Asset } from "../types";
+import {
+  useGetAssetsQuery,
+  useCreateAssetMutation,
+  useUpdateAssetMutation,
+  useDeleteAssetMutation,
+} from "../services/assetsApi";
 import styles from "./Assets.module.css";
 
 const Assets: React.FC = () => {
@@ -30,13 +36,27 @@ const Assets: React.FC = () => {
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [form] = Form.useForm();
 
-  const dispatch = useAppDispatch();
   const { currentUser } = useAppSelector((state) => state.auth);
-  const { assets } = useAppSelector((state) => state.app);
+  const shouldSkipAssetsQuery = !currentUser;
+  const {
+    data: assetsData,
+    isLoading: assetsLoading,
+    isFetching: assetsFetching,
+  } = useGetAssetsQuery(undefined, { skip: shouldSkipAssetsQuery });
+  const [createAsset, { isLoading: isCreating }] = useCreateAssetMutation();
+  const [updateAsset, { isLoading: isUpdating }] = useUpdateAssetMutation();
+  const [deleteAsset, { isLoading: isDeleting }] = useDeleteAssetMutation();
+
+  const assets = useMemo(() => assetsData ?? [], [assetsData]);
+  const isModalSubmitting = isCreating || isUpdating;
+  const isTableLoading = assetsLoading || assetsFetching;
+
+  const totalBalance = useMemo(
+    () => assets.reduce((sum, asset) => sum + asset.balance, 0),
+    [assets]
+  );
 
   if (!currentUser) return null;
-
-  const totalBalance = assets.reduce((sum, asset) => sum + asset.balance, 0);
 
   const handleAdd = () => {
     setEditingAsset(null);
@@ -46,36 +66,43 @@ const Assets: React.FC = () => {
 
   const handleEdit = (asset: Asset) => {
     setEditingAsset(asset);
-    form.setFieldsValue(asset);
+    form.setFieldsValue({
+      name: asset.name,
+      balance: asset.balance,
+    });
     setIsModalVisible(true);
   };
 
-  const handleDelete = (assetKey: string) => {
-    dispatch(deleteAsset(assetKey));
-    message.success("Счёт удалён");
+  const handleDelete = async (assetId: number) => {
+    try {
+      await deleteAsset(assetId).unwrap();
+      message.success("Счёт удалён");
+    } catch (error) {
+      console.error("Failed to delete asset", error);
+      message.error("Не удалось удалить счёт");
+    }
   };
 
-  const handleSubmit = (values: { name: string; balance: number }) => {
-    if (editingAsset) {
-      dispatch(
-        updateAsset({
-          user_id: currentUser.user_id,
-          name: values.name,
-          balance: values.balance,
-        })
-      );
-      message.success("Счёт обновлён");
-    } else {
-      const newAsset: Asset = {
-        user_id: currentUser.user_id,
-        name: values.name,
-        balance: values.balance,
-      };
-      dispatch(addAsset(newAsset));
-      message.success("Счёт добавлен");
+  const handleSubmit = async (values: { name: string; balance: number }) => {
+    const commonPayload = {
+      name: values.name,
+      balance: Number(values.balance),
+    };
+
+    try {
+      if (editingAsset) {
+        await updateAsset({ id: editingAsset.id, ...commonPayload }).unwrap();
+        message.success("Счёт обновлён");
+      } else {
+        await createAsset({ ...commonPayload }).unwrap();
+        message.success("Счёт добавлен");
+      }
+      setIsModalVisible(false);
+      form.resetFields();
+    } catch (error) {
+      console.error("Failed to submit asset", error);
+      message.error("Не удалось сохранить счёт");
     }
-    setIsModalVisible(false);
-    form.resetFields();
   };
 
   return (
@@ -109,69 +136,76 @@ const Assets: React.FC = () => {
               </Button>
             }
           >
-            <Row gutter={[16, 16]}>
-              {assets.map((asset) => (
-                <Col xs={24} sm={12} lg={8} xl={6} key={asset.name}>
-                  <Card
-                    size="small"
-                    className={styles.assetCard}
-                    actions={[
-                      <Button
-                        type="text"
-                        icon={<EditOutlined />}
-                        onClick={() => handleEdit(asset)}
-                        title="Редактировать"
-                      />,
-                      <Popconfirm
-                        title="Удалить счёт?"
-                        description="Это действие нельзя отменить"
-                        onConfirm={() => handleDelete(asset.name)}
-                        okText="Да"
-                        cancelText="Нет"
+            <Spin spinning={isTableLoading} tip="Загрузка счетов...">
+              <div>
+                <Row gutter={[16, 16]}>
+                  {assets.map((asset) => (
+                    <Col xs={24} sm={12} lg={8} xl={6} key={asset.id}>
+                      <Card
+                        size="small"
+                        className={styles.assetCard}
+                        actions={[
+                          <Button
+                            key="edit"
+                            type="text"
+                            icon={<EditOutlined />}
+                            onClick={() => handleEdit(asset)}
+                            title="Редактировать"
+                          />,
+                          <Popconfirm
+                            key="delete"
+                            title="Удалить счёт?"
+                            description="Это действие нельзя отменить"
+                            onConfirm={() => handleDelete(asset.id)}
+                            okText="Да"
+                            cancelText="Нет"
+                          >
+                            <Button
+                              type="text"
+                              danger
+                              icon={<DeleteOutlined />}
+                              title="Удалить"
+                              loading={isDeleting}
+                            />
+                          </Popconfirm>,
+                        ]}
                       >
-                        <Button
-                          type="text"
-                          danger
-                          icon={<DeleteOutlined />}
-                          title="Удалить"
-                        />
-                      </Popconfirm>,
-                    ]}
-                  >
-                    <div className={styles.assetHeader}>
-                      <CreditCardOutlined className={styles.assetIcon} />
-                      <h4 className={styles.assetName}>{asset.name}</h4>
-                    </div>
+                        <div className={styles.assetHeader}>
+                          <CreditCardOutlined className={styles.assetIcon} />
+                          <h4 className={styles.assetName}>{asset.name}</h4>
+                        </div>
 
-                    <div className={styles.assetBalance}>
-                      <Statistic
-                        value={asset.balance}
-                        precision={0}
-                        suffix="₽"
-                        valueStyle={{
-                          fontSize: "20px",
-                          color: asset.balance >= 0 ? "#52c41a" : "#f5222d",
-                        }}
-                      />
-                    </div>
-                  </Card>
-                </Col>
-              ))}
-            </Row>
+                        <div className={styles.assetBalance}>
+                          <Statistic
+                            value={asset.balance}
+                            precision={0}
+                            suffix="₽"
+                            valueStyle={{
+                              fontSize: "20px",
+                              color: asset.balance >= 0 ? "#52c41a" : "#f5222d",
+                            }}
+                          />
+                        </div>
+                      </Card>
+                    </Col>
+                  ))}
+                </Row>
 
-            {assets.length === 0 && (
-              <div className={styles.emptyState}>
-                <CreditCardOutlined className={styles.emptyIcon} />
-                <p>У вас пока нет счетов</p>
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={handleAdd}
-                >
-                  Добавить первый счёт
-                </Button>
+                {assets.length === 0 && !isTableLoading && (
+                  <div className={styles.emptyState}>
+                    <CreditCardOutlined className={styles.emptyIcon} />
+                    <p>У вас пока нет счетов</p>
+                    <Button
+                      type="primary"
+                      icon={<PlusOutlined />}
+                      onClick={handleAdd}
+                    >
+                      Добавить первый счёт
+                    </Button>
+                  </div>
+                )}
               </div>
-            )}
+            </Spin>
           </Card>
         </Col>
       </Row>
@@ -209,7 +243,12 @@ const Assets: React.FC = () => {
 
           <Form.Item>
             <Space>
-              <Button type="primary" htmlType="submit">
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={isModalSubmitting}
+                disabled={isModalSubmitting}
+              >
                 {editingAsset ? "Обновить" : "Добавить"}
               </Button>
               <Button onClick={() => setIsModalVisible(false)}>Отмена</Button>

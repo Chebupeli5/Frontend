@@ -28,6 +28,7 @@ import {
   deleteFinancialGoal,
 } from "../store/appSlice";
 import type { FinancialGoal } from "../types";
+import { useGetAssetsQuery } from "../services/assetsApi";
 import styles from "./Goals.module.css";
 
 const Goals: React.FC = () => {
@@ -37,12 +38,17 @@ const Goals: React.FC = () => {
 
   const dispatch = useAppDispatch();
   const { currentUser } = useAppSelector((state) => state.auth);
-  const { financialGoals, assets, savingsAccounts } = useAppSelector(
+  const { financialGoals, savingsAccounts } = useAppSelector(
     (state) => state.app
   );
+  const shouldSkipAssetsQuery = !currentUser;
+  const { data: assetsData } = useGetAssetsQuery(undefined, {
+    skip: shouldSkipAssetsQuery,
+  });
 
   if (!currentUser) return null;
 
+  const assets = assetsData ?? [];
   const savingsAccountsList = savingsAccounts ?? [];
   const totalWealth =
     assets.reduce((sum, asset) => sum + asset.balance, 0) +

@@ -29,6 +29,7 @@ export interface SavingsAccount {
 }
 
 export interface Asset {
+  id: number;
   user_id: number;
   name: string;
   balance: number;

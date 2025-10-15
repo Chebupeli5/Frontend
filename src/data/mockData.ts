@@ -3,7 +3,6 @@ import type {
   Category,
   CategoryLimit,
   SavingsAccount,
-  Asset,
   FinancialGoal,
   Loan,
   Operation,
@@ -42,30 +41,26 @@ export const mockCategoryLimits: CategoryLimit[] = [
 
 export const mockSavingsAccounts: SavingsAccount[] = [
   {
+    id: 1,
     user_id: 1,
     saving_name: "Накопления на отпуск",
     balance: 85000,
     interest_rate: 8.5,
   },
   {
+    id: 2,
     user_id: 1,
     saving_name: "Резервный фонд",
     balance: 150000,
     interest_rate: 7.2,
   },
   {
+    id: 3,
     user_id: 1,
     saving_name: "На автомобиль",
     balance: 320000,
     interest_rate: 9.1,
   },
-];
-
-export const mockAssets: Asset[] = [
-  { user_id: 1, name: "Основная карта (Сбербанк)", balance: 45000 },
-  { user_id: 1, name: "Зарплатная карта", balance: 78000 },
-  { user_id: 1, name: "Кешбэк карта", balance: 12000 },
-  { user_id: 1, name: "Наличные", balance: 5000 },
 ];
 
 export const mockFinancialGoals: FinancialGoal[] = [
