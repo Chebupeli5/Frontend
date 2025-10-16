@@ -3,7 +3,6 @@ import type {
   Category,
   CategoryLimit,
   SavingsAccount,
-  Loan,
   Operation,
   Report,
   Notification,
@@ -59,23 +58,6 @@ export const mockSavingsAccounts: SavingsAccount[] = [
     saving_name: "На автомобиль",
     balance: 320000,
     interest_rate: 9.1,
-  },
-];
-
-export const mockLoans: Loan[] = [
-  {
-    user_id: 1,
-    credit_name: "Ипотека",
-    loan_balance: 2800000,
-    loan_payment: 35000,
-    payment_date: "2025-10-15",
-  },
-  {
-    user_id: 1,
-    credit_name: "Автокредит",
-    loan_balance: 450000,
-    loan_payment: 18000,
-    payment_date: "2025-10-20",
   },
 ];
 
