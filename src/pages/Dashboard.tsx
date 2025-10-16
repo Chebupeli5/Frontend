@@ -15,11 +15,11 @@ import {
 } from "../services/categoriesApi";
 import { useGetSavingsAccountsQuery } from "../services/savingsAccountsApi";
 import { useGetAssetsQuery } from "../services/assetsApi";
+import { useGetLoansQuery } from "../services/loansApi";
 import styles from "./Dashboard.module.css";
 
 const Dashboard: React.FC = () => {
   const { currentUser } = useAppSelector((state) => state.auth);
-  const { loans } = useAppSelector((state) => state.app);
   const {
     data: categoriesData,
     isLoading: categoriesLoading,
@@ -35,12 +35,17 @@ const Dashboard: React.FC = () => {
     isLoading: savingsLoading,
     isFetching: savingsFetching,
   } = useGetSavingsAccountsQuery();
-  const shouldSkipAssetsQuery = !currentUser;
+  const shouldSkipDataFetch = !currentUser;
   const {
     data: assetsData,
     isLoading: assetsLoading,
     isFetching: assetsFetching,
-  } = useGetAssetsQuery(undefined, { skip: shouldSkipAssetsQuery });
+  } = useGetAssetsQuery(undefined, { skip: shouldSkipDataFetch });
+  const {
+    data: loansData,
+    isLoading: loansLoading,
+    isFetching: loansFetching,
+  } = useGetLoansQuery(undefined, { skip: shouldSkipDataFetch });
   const {
     data: operations = [],
     isLoading: operationsLoading,
@@ -53,6 +58,7 @@ const Dashboard: React.FC = () => {
   const categoryLimits = limitsData ?? [];
   const savingsAccounts = savingsAccountsData ?? [];
   const assets = assetsData ?? [];
+  const loans = loansData ?? [];
   const isDataLoading =
     categoriesLoading ||
     categoriesFetching ||
@@ -63,7 +69,9 @@ const Dashboard: React.FC = () => {
     savingsLoading ||
     savingsFetching ||
     assetsLoading ||
-    assetsFetching;
+    assetsFetching ||
+    loansLoading ||
+    loansFetching;
 
   const totalAssets = assets.reduce((sum, asset) => sum + asset.balance, 0);
   const totalSavings = savingsAccounts.reduce(

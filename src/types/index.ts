@@ -51,6 +51,7 @@ export interface FinancialGoal {
 }
 
 export interface Loan {
+  id: number;
   user_id: number;
   credit_name: string;
   loan_balance: number;
@@ -94,9 +95,6 @@ export interface AuthState {
 
 export interface AppState {
   users: User[];
-  savingsAccounts?: SavingsAccount[];
-  assets: Asset[];
-  loans: Loan[];
   reports: Report[];
   notifications: Notification[];
 }

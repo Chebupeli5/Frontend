@@ -83,6 +83,22 @@
   color: #52c41a;
 }
 
+.exception {
+  color: #f5222d;
+}
+
+.active {
+  color: #fa8c16;
+}
+
+.normal {
+  color: #52c41a;
+}
+
+.success {
+  color: #52c41a;
+}
+
 .progressSection {
   background: #f9f9f9;
   padding: 12px;
